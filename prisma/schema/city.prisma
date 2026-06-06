@@ -1,0 +1,10 @@
+model City {
+  id        String   @id @default(cuid())
+  name      String
+  regionId  String
+  region    Region   @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  listings  Listing[]
+  users     User[]
+
+  @@unique([name, regionId])
+}
