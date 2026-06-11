@@ -1,7 +1,20 @@
+enum PlanTier {
+  FREE
+  PROMO
+  REGULAR
+}
+
 model PricingPlan {
-  id          String    @id @default(cuid())
-  title       String    
-  price       Float     
-  duration    Int      
-  isActive    Boolean   @default(true)
+  id          String   @id @default(cuid())
+  title       String
+  price       Float
+  duration    Int
+  tier        PlanTier @default(REGULAR)
+  isActive    Boolean  @default(true)
+}
+
+model SystemSettings {
+  id              String @id @default("default")
+  freePeriodDays  Int    @default(30)
+  promoPeriodDays Int    @default(90)
 }

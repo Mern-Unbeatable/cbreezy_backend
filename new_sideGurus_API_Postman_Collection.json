@@ -1,0 +1,4643 @@
+{
+	"info": {
+		"_postman_id": "sidegurus-api-collection",
+		"name": "SideGurus API",
+		"description": "Complete API collection for SideGurus with authentication, category, location, service, and event moderation endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "adminToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "serviceId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "serviceCategoryId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "serviceSubCategoryId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "eventId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "eventCategoryId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "countryId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "regionId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "cityId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "cityName",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "pricingPlanId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "checkoutSessionId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "successUrl",
+			"value": "http://localhost:5173/payment-success",
+			"type": "string"
+		},
+		{
+			"key": "cancelUrl",
+			"value": "http://localhost:5173/payment-cancel",
+			"type": "string"
+		},
+		{
+			"key": "firebaseIdToken",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Public Endpoints",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Check if server is running"
+					}
+				},
+				{
+					"name": "Contact Us",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Kevin Ahmed\",\n  \"email\": \"customer@gmail.com\",\n  \"message\": \"Hello, I want to know more about your services. Please contact me back.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/support/contact-us",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"support",
+								"contact-us"
+							]
+						},
+						"description": "Public contact-us endpoint. Stores the message as a support ticket and sends the email to shanjid.maktech@gmail.com."
+					}
+				},
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.otp && process.env.NODE_ENV === 'development') {",
+									"        console.log('OTP for email verification:', response.otp);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"Test User\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"TestUser123\",\n  \"confirmPassword\": \"TestUser123\",\n  \"phoneNumber\": \"+1-555-1234\",\n  \"countryName\": \"USA\",\n  \"regionName\": \"California\",\n  \"cityName\": \"{{cityName}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user account. After registration, you must verify your email with OTP before logging in. Check console logs or server output for OTP in development mode. Phone number is optional. Country and region are required."
+					}
+				},
+				{
+					"name": "Verify Registration OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.token) {",
+									"        pm.collectionVariables.set('userToken', response.token);",
+									"        console.log('User token saved to collection variables');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"testuser@example.com\",\n  \"otp\": \"12345\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/verify-registration-otp",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"verify-registration-otp"
+							]
+						},
+						"description": "Verify registration with OTP sent to your email. Upon successful verification, you will receive a JWT token and your email will be marked as verified. OTP is valid for 15 minutes."
+					}
+				},
+				{
+					"name": "Resend Registration OTP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"testuser@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/resend-registration-otp",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"resend-registration-otp"
+							]
+						},
+						"description": "Resend OTP if you didn't receive it or if it expired. Only works for unverified email addresses. Check console logs for OTP in development mode."
+					}
+				},
+				{
+					"name": "Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.token) {",
+									"        pm.collectionVariables.set('userToken', response.token);",
+									"        console.log('User token saved to collection variables');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"User@123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login with existing user credentials. Note: Email must be verified before login. Demo account: john.doe@example.com / User@123"
+					}
+				},
+				{
+					"name": "Firebase Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.token) {",
+									"        pm.collectionVariables.set('userToken', response.token);",
+									"        console.log('User token saved to collection variables');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"idToken\": \"{{firebaseIdToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/firebase-register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"firebase-register"
+							]
+						},
+						"description": "Register with Firebase ID token. Fails if email already exists. On success, backend JWT is saved into userToken."
+					}
+				},
+				{
+					"name": "Firebase Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.token) {",
+									"        pm.collectionVariables.set('userToken', response.token);",
+									"        console.log('User token saved to collection variables');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"idToken\": \"{{firebaseIdToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/firebase-login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"firebase-login"
+							]
+						},
+						"description": "Login or register using Firebase ID token. Set {{firebaseIdToken}} from frontend getIdToken() output. On success, backend JWT is saved into userToken."
+					}
+				},
+				{
+					"name": "Login Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.token) {",
+									"        pm.collectionVariables.set('adminToken', response.token);",
+									"        console.log('Admin token saved to collection variables');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@sidegurus.com\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login with admin credentials. Demo account: admin@sidegurus.com / Admin@123"
+					}
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/forgot-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"forgot-password"
+							]
+						},
+						"description": "Request OTP for password reset. Check console logs for OTP in development mode."
+					}
+				},
+				{
+					"name": "Verify OTP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"otp\": \"12345\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/verify-otp",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"verify-otp"
+							]
+						},
+						"description": "Verify the OTP code sent to email. OTP is valid for 15 minutes."
+					}
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"otp\": \"12345\",\n  \"password\": \"NewPassword123\",\n  \"confirmPassword\": \"NewPassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/reset-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"reset-password"
+							]
+						},
+						"description": "Reset password using verified OTP. Password must be at least 8 characters."
+					}
+				}
+			],
+			"description": "Public authentication endpoints that don't require authentication token"
+		},
+		{
+			"name": "User Endpoints",
+			"item": [
+				{
+					"name": "Get Account Settings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/account-settings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"account-settings"
+							]
+						},
+						"description": "Get current logged-in user account settings including full name, email, phone number, country, location, and profile image."
+					}
+				},
+				{
+					"name": "Update Account Settings",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "fullName",
+									"value": "John Doe Updated",
+									"type": "text"
+								},
+								{
+									"key": "phoneNumber",
+									"value": "+1-555-9999",
+									"type": "text"
+								},
+								{
+									"key": "countryId",
+									"value": "{{countryId}}",
+									"type": "text"
+								},
+								{
+									"key": "regionId",
+									"value": "{{regionId}}",
+									"type": "text"
+								},
+								{
+									"key": "cityId",
+									"value": "{{cityId}}",
+									"type": "text"
+								},
+								{
+									"key": "profileImage",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/account-settings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"account-settings"
+							]
+						},
+						"description": "Update account settings using multipart/form-data. Email is read-only. You can update full name, phone number, country, location, and upload a new profile image."
+					}
+				},
+				{
+					"name": "Change Account Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currentPassword\": \"User@123\",\n  \"newPassword\": \"NewUserPass123\",\n  \"confirmPassword\": \"NewUserPass123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/account-settings/change-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"account-settings",
+								"change-password"
+							]
+						},
+						"description": "Change password for authenticated user from the account settings screen. Requires current password verification."
+					}
+				}
+			],
+			"description": "Endpoints for regular users (USER role). Requires user authentication token.",
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{userToken}}",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "Admin Endpoints",
+			"item": [
+				{
+					"name": "Account Management",
+					"item": [
+						{
+							"name": "Get Admin Account Settings",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/auth/account-settings",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"auth",
+										"account-settings"
+									]
+								},
+								"description": "Get admin account settings information"
+							}
+						},
+						{
+							"name": "Update Admin Account Settings",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "fullName",
+											"value": "Admin User Updated",
+											"type": "text"
+										},
+										{
+											"key": "phoneNumber",
+											"value": "+1-555-0001",
+											"type": "text"
+										},
+										{
+											"key": "countryId",
+											"value": "{{countryId}}",
+											"type": "text"
+										},
+										{
+											"key": "regionId",
+											"value": "{{regionId}}",
+											"type": "text"
+										},
+										{
+											"key": "profileImage",
+											"type": "file",
+											"src": ""
+										}
+									]
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/auth/account-settings",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"auth",
+										"account-settings"
+									]
+								},
+								"description": "Update admin account settings using multipart/form-data."
+							}
+						},
+						{
+							"name": "Change Admin Account Password",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"currentPassword\": \"Admin@123\",\n  \"newPassword\": \"NewAdminPass123\",\n  \"confirmPassword\": \"NewAdminPass123\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/auth/account-settings/change-password",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"auth",
+										"account-settings",
+										"change-password"
+									]
+								},
+								"description": "Change password for admin user from the account settings screen."
+							}
+						}
+					],
+					"description": "Admin profile and account settings management"
+				},
+				{
+					"name": "Dashboard & Analytics",
+					"item": [
+						{
+							"name": "Get Dashboard Overview",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/dashboard/overview?period=thisYear",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"dashboard",
+										"overview"
+									],
+									"query": [
+										{
+											"key": "period",
+											"value": "thisYear",
+											"description": "Allowed values: thisYear, lastYear, thisMonth, lastMonth, last3Months, last6Months"
+										}
+									]
+								},
+								"description": "Admin dashboard overview API for total users, total listings, total revenue, pending listings, spam reports, and sales performance chart. Supported period values: thisYear, lastYear, thisMonth, lastMonth, last3Months, last6Months."
+							}
+						}
+					],
+					"description": "Dashboard analytics and reporting endpoints"
+				},
+				{
+					"name": "User Management",
+					"item": [
+						{
+							"name": "Get All Users",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/users?search=john&role=USER&sortBy=createdAt&sortOrder=desc&page=1&limit=20",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"users"
+									],
+									"query": [
+										{
+											"key": "search",
+											"value": "john",
+											"description": "Optional text search on fullName, email, or phoneNumber"
+										},
+										{
+											"key": "role",
+											"value": "USER",
+											"description": "Optional. Allowed values: USER, ADMIN. Default is USER"
+										},
+										{
+											"key": "sortBy",
+											"value": "createdAt",
+											"description": "Optional. Allowed values: createdAt, fullName, email"
+										},
+										{
+											"key": "sortOrder",
+											"value": "desc",
+											"description": "Optional. Allowed values: asc, desc"
+										},
+										{
+											"key": "page",
+											"value": "1",
+											"description": "Optional page number, minimum 1"
+										},
+										{
+											"key": "limit",
+											"value": "20",
+											"description": "Optional page size, 1 to 100"
+										}
+									]
+								},
+								"description": "Admin user management list API. Returns paginated users with country, region, and activeListingsCount for the user management table."
+							}
+						},
+						{
+							"name": "Get User By ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/users/{{managedUserId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"users",
+										"{{managedUserId}}"
+									]
+								},
+								"description": "Admin gets one user by id for the user details or edit screen."
+							}
+						},
+						{
+							"name": "Update User",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"fullName\": \"John Doe Updated\",\n  \"email\": \"john.doe.updated@example.com\",\n  \"phoneNumber\": \"+1-202-555-0199\",\n  \"countryId\": \"{{countryId}}\",\n  \"regionId\": \"{{regionId}}\",\n  \"role\": \"USER\",\n  \"isEmailVerified\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/users/{{managedUserId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"users",
+										"{{managedUserId}}"
+									]
+								},
+								"description": "Admin updates a user. Editable fields: fullName, email, phoneNumber, countryId, regionId, role, isEmailVerified."
+							}
+						},
+						{
+							"name": "Delete User",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/users/{{managedUserId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"users",
+										"{{managedUserId}}"
+									]
+								},
+								"description": "Admin soft deletes a user. The user account is archived and that user's active listings are also soft deleted and suspended."
+							}
+						}
+					],
+					"description": "User account management and moderation"
+				},
+				{
+					"name": "Listing & Content Moderation",
+					"item": [
+						{
+							"name": "Get All Listings (Unified)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/listings?status=PENDING&sortBy=createdAt&sortOrder=desc&page=1&limit=20",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"listings"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "PENDING",
+											"description": "Optional. Filter: PENDING, APPROVED, SUSPENDED, EXPIRED"
+										},
+										{
+											"key": "listingType",
+											"value": "",
+											"description": "Optional. Filter by type: SERVICE or EVENT",
+											"disabled": true
+										},
+										{
+											"key": "categoryId",
+											"value": "",
+											"description": "Optional. Filter by category",
+											"disabled": true
+										},
+										{
+											"key": "subCategoryId",
+											"value": "",
+											"description": "Optional. Filter by subcategory (services only)",
+											"disabled": true
+										},
+										{
+											"key": "countryId",
+											"value": "",
+											"description": "Optional. Filter by country",
+											"disabled": true
+										},
+										{
+											"key": "regionId",
+											"value": "",
+											"description": "Optional. Filter by region",
+											"disabled": true
+										},
+										{
+											"key": "search",
+											"value": "",
+											"description": "Optional. Search title/description/user",
+											"disabled": true
+										},
+										{
+											"key": "sortBy",
+											"value": "createdAt",
+											"description": "Optional. Sort: createdAt, price, title"
+										},
+										{
+											"key": "sortOrder",
+											"value": "desc",
+											"description": "Optional. Order: asc, desc"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										}
+									]
+								},
+								"description": "Admin dashboard listing management: Get all listings (services and events) with unified filtering. Can filter by status (PENDING/APPROVED/SUSPENDED) and listingType (SERVICE/EVENT). Returns spamReports count for each listing."
+							}
+						},
+						{
+							"name": "View Listing Details",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/listings/{{serviceId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"listings",
+										"{{serviceId}}"
+									]
+								},
+								"description": "Admin views full listing details (service or event)"
+							}
+						},
+						{
+							"name": "Approve Listing",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"APPROVED\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/listings/{{serviceId}}/status",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"listings",
+										"{{serviceId}}",
+										"status"
+									]
+								},
+								"description": "Admin approves a pending listing (service or event)"
+							}
+						},
+						{
+							"name": "Suspend Listing",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"SUSPENDED\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/listings/{{serviceId}}/status",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"listings",
+										"{{serviceId}}",
+										"status"
+									]
+								},
+								"description": "Admin suspends a listing (service or event)"
+							}
+						},
+						{
+							"name": "Delete Listing",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/admin/listings/{{serviceId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"admin",
+										"listings",
+										"{{serviceId}}"
+									]
+								},
+								"description": "Admin soft deletes a listing (service or event)"
+							}
+						}
+					],
+					"description": "Service and event listing management, approval, and moderation"
+				},
+				{
+					"name": "Category Management",
+					"item": [
+						{
+							"name": "Service Categories",
+							"item": [
+								{
+									"name": "Create Service Category",
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "name",
+													"value": "Automotive Services",
+													"type": "text"
+												},
+												{
+													"key": "image",
+													"type": "file",
+													"src": ""
+												}
+											]
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/categories/service",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"categories",
+												"service"
+											]
+										},
+										"description": "Admin creates a dedicated SERVICE category using multipart/form-data. Send the category image as a file in the image field."
+									}
+								},
+								{
+									"name": "Update Service Category",
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "name",
+													"value": "Updated Service Category Name",
+													"type": "text"
+												},
+												{
+													"key": "image",
+													"type": "file",
+													"src": ""
+												}
+											]
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/admin/categories/service/{{categoryId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"admin",
+												"categories",
+												"service",
+												"{{categoryId}}"
+											]
+										},
+										"description": "Update service category. name and image are optional; if image is not sent, current image remains unchanged."
+									}
+								},
+								{
+									"name": "Delete Service Category",
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/api/admin/categories/service/{{categoryId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"admin",
+												"categories",
+												"service",
+												"{{categoryId}}"
+											]
+										},
+										"description": "Delete service category by ID."
+									}
+								},
+								{
+									"name": "Create Service Subcategory",
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"name\": \"Car Detailing\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/categories/service/{{serviceCategoryId}}/subcategories",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"categories",
+												"service",
+												"{{serviceCategoryId}}",
+												"subcategories"
+											]
+										},
+										"description": "Admin creates a subcategory under a selected service category. Only name field is required."
+									}
+								},
+								{
+									"name": "Update Service Subcategory",
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"name\": \"Updated Subcategory Name\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/admin/categories/service/{{categoryId}}/subcategories/{{subcategoryId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"admin",
+												"categories",
+												"service",
+												"{{categoryId}}",
+												"subcategories",
+												"{{subcategoryId}}"
+											]
+										},
+										"description": "Update service subcategory name."
+									}
+								},
+								{
+									"name": "Delete Service Subcategory",
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/api/admin/categories/service/{{categoryId}}/subcategories/{{subcategoryId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"admin",
+												"categories",
+												"service",
+												"{{categoryId}}",
+												"subcategories",
+												"{{subcategoryId}}"
+											]
+										},
+										"description": "Delete service subcategory."
+									}
+								}
+							],
+							"description": "Create, update, and delete service categories and subcategories"
+						},
+						{
+							"name": "Event Categories",
+							"item": [
+								{
+									"name": "Create Event Category",
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "name",
+													"value": "Wedding Events",
+													"type": "text"
+												},
+												{
+													"key": "image",
+													"type": "file",
+													"src": ""
+												}
+											]
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/categories/event",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"categories",
+												"event"
+											]
+										},
+										"description": "Admin creates a dedicated EVENT category using multipart/form-data. Send the category image as a file in the image field."
+									}
+								},
+								{
+									"name": "Update Event Category",
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "formdata",
+											"formdata": [
+												{
+													"key": "name",
+													"value": "Updated Event Category Name",
+													"type": "text"
+												},
+												{
+													"key": "image",
+													"type": "file",
+													"src": ""
+												}
+											]
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/admin/categories/event/{{categoryId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"admin",
+												"categories",
+												"event",
+												"{{categoryId}}"
+											]
+										},
+										"description": "Update event category. name and image are optional; if image is not sent, current image remains unchanged."
+									}
+								},
+								{
+									"name": "Delete Event Category",
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/api/admin/categories/event/{{categoryId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"admin",
+												"categories",
+												"event",
+												"{{categoryId}}"
+											]
+										},
+										"description": "Delete event category by ID."
+									}
+								}
+							],
+							"description": "Create, update, and delete event categories"
+						}
+					],
+					"description": "Service and event category management"
+				},
+				{
+					"name": "Location Management",
+					"item": [
+						{
+							"name": "Countries",
+							"item": [
+								{
+									"name": "Create Country",
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"name\": \"Saudi Arabia\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/locations/countries",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"locations",
+												"countries"
+											]
+										},
+										"description": "Admin creates a country for listing forms and filters"
+									}
+								},
+								{
+									"name": "Update Country",
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"name\": \"Saudi Arabia Updated\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/locations/countries/{{countryId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"locations",
+												"countries",
+												"{{countryId}}"
+											]
+										},
+										"description": "Admin updates an existing country name"
+									}
+								},
+								{
+									"name": "Delete Country",
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/api/locations/countries/{{countryId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"locations",
+												"countries",
+												"{{countryId}}"
+											]
+										},
+										"description": "Admin deletes a country"
+									}
+								}
+							],
+							"description": "Manage countries"
+						},
+						{
+							"name": "Regions",
+							"item": [
+								{
+									"name": "Create Region",
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"name\": \"Makkah Region\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/locations/countries/{{countryId}}/regions",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"locations",
+												"countries",
+												"{{countryId}}",
+												"regions"
+											]
+										},
+										"description": "Admin creates a region inside a selected country"
+									}
+								},
+								{
+									"name": "Update Region",
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"name\": \"Makkah Region Updated\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/locations/countries/{{countryId}}/regions/{{regionId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"locations",
+												"countries",
+												"{{countryId}}",
+												"regions",
+												"{{regionId}}"
+											]
+										},
+										"description": "Admin updates a region in a selected country"
+									}
+								},
+								{
+									"name": "Delete Region",
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/api/locations/countries/{{countryId}}/regions/{{regionId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"locations",
+												"countries",
+												"{{countryId}}",
+												"regions",
+												"{{regionId}}"
+											]
+										},
+										"description": "Admin deletes a region in a selected country"
+									}
+								}
+							],
+							"description": "Manage regions within countries"
+						},
+						{
+							"name": "Cities",
+							"item": [
+								{
+									"name": "Create City",
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"name\": \"Riyadh\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/locations/regions/{{regionId}}/cities",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"locations",
+												"regions",
+												"{{regionId}}",
+												"cities"
+											]
+										},
+										"description": "Admin creates a city inside a selected region"
+									}
+								},
+								{
+									"name": "Update City",
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											},
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n  \"name\": \"Riyadh Updated\"\n}"
+										},
+										"url": {
+											"raw": "{{baseUrl}}/api/locations/regions/{{regionId}}/cities/{{cityId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"locations",
+												"regions",
+												"{{regionId}}",
+												"cities",
+												"{{cityId}}"
+											]
+										},
+										"description": "Admin updates a city in a selected region"
+									}
+								},
+								{
+									"name": "Delete City",
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "Authorization",
+												"value": "Bearer {{adminToken}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseUrl}}/api/locations/regions/{{regionId}}/cities/{{cityId}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"api",
+												"locations",
+												"regions",
+												"{{regionId}}",
+												"cities",
+												"{{cityId}}"
+											]
+										},
+										"description": "Admin deletes a city in a selected region"
+									}
+								}
+							],
+							"description": "Manage cities within regions"
+						}
+					],
+					"description": "Countries, regions, and cities management"
+				},
+				{
+					"name": "Pricing Management",
+					"item": [
+						{
+							"name": "Get System Settings (Admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/pricing-plans/settings",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"pricing-plans",
+										"settings"
+									]
+								},
+								"description": "Admin gets the current system settings including freePeriodDays and promoPeriodDays."
+							}
+						},
+						{
+							"name": "Update System Settings (Admin)",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"freePeriodDays\": 30,\n  \"promoPeriodDays\": 90\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/pricing-plans/settings",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"pricing-plans",
+										"settings"
+									]
+								},
+								"description": "Admin updates the system settings for free and promo tier duration."
+							}
+						},
+						{
+							"name": "Create Pricing Plan",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"Standard Promo\",\n  \"price\": 0.99,\n  \"duration\": 30,\n  \"tier\": \"PROMO\",\n  \"isActive\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/pricing-plans",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"pricing-plans"
+									]
+								},
+								"description": "Admin creates a pricing plan. Tier must be FREE, PROMO, or REGULAR."
+							}
+						},
+						{
+							"name": "Update Pricing Plan",
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"title\": \"Standard Promo Updated\",\n  \"price\": 1.99,\n  \"duration\": 45,\n  \"tier\": \"PROMO\",\n  \"isActive\": true\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/pricing-plans/{{pricingPlanId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"pricing-plans",
+										"{{pricingPlanId}}"
+									]
+								},
+								"description": "Admin updates a pricing plan"
+							}
+						},
+						{
+							"name": "Delete Pricing Plan",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/pricing-plans/{{pricingPlanId}}",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"pricing-plans",
+										"{{pricingPlanId}}"
+									]
+								},
+								"description": "Admin deletes a pricing plan."
+							}
+						}
+					],
+					"description": "Manage subscription pricing plans and promotional settings."
+				},
+				{
+					"name": "Support Management",
+					"item": [
+						{
+							"name": "Get All Support Tickets",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/support/admin/tickets?page=1&limit=10&sortBy=createdAt&sortOrder=desc&search=",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"support",
+										"admin",
+										"tickets"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "10"
+										},
+										{
+											"key": "sortBy",
+											"value": "createdAt",
+											"description": "Sortable fields: createdAt, name, email"
+										},
+										{
+											"key": "sortOrder",
+											"value": "desc",
+											"description": "Order: asc or desc"
+										},
+										{
+											"key": "search",
+											"value": "",
+											"description": "Search in name, email, or message (optional)"
+										}
+									]
+								},
+								"description": "Admin retrieves all support tickets with pagination, sorting, and search. Returns paginated list with total count and page metadata."
+							}
+						},
+						{
+							"name": "Get Support Ticket By ID",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/support/admin/tickets/ticket-id-here",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"support",
+										"admin",
+										"tickets",
+										"ticket-id-here"
+									]
+								},
+								"description": "Admin retrieves a specific support ticket by its ID. Returns ticket details including name, email, message, and timestamps."
+							}
+						},
+						{
+							"name": "Delete Support Ticket",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/support/admin/tickets/ticket-id-here",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"support",
+										"admin",
+										"tickets",
+										"ticket-id-here"
+									]
+								},
+								"description": "Admin deletes a support ticket by its ID. This operation permanently removes the ticket from the database."
+							}
+						}
+					],
+					"description": "View and manage support tickets from contact form submissions"
+				}
+			],
+			"description": "All admin endpoints organized by function. Requires admin authentication token.",
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{adminToken}}",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "Category Endpoints",
+			"item": [
+				{
+					"name": "Get All Service Categories With Subcategories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/service",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"service"
+							]
+						},
+						"description": "Public API. Returns all service categories with their nested subcategories. No login required."
+					}
+				},
+				{
+					"name": "Get Service Category With Subcategories By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/service/{{serviceCategoryId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"service",
+								"{{serviceCategoryId}}"
+							]
+						},
+						"description": "Public API. Returns one service category and its subcategories by categoryId. No login required."
+					}
+				},
+				{
+					"name": "Get All Event Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/event",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"event"
+							]
+						},
+						"description": "Public API. Returns all event categories. No login required."
+					}
+				},
+				{
+					"name": "Search Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/categories/search?q=health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"categories",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "health",
+									"description": "Required search text. Example values: health, safari, cleaning"
+								}
+							]
+						},
+						"description": "Search categories by name (case-insensitive). Query param: q=any text keyword."
+					}
+				}
+			],
+			"description": "Public category endpoints for browsing. Admin management endpoints are in Admin Endpoints > Category Management section."
+		},
+		{
+			"name": "Location Endpoints",
+			"item": [
+				{
+					"name": "Get Countries With Regions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/locations/countries-with-regions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"locations",
+								"countries-with-regions"
+							]
+						},
+						"description": "Get all countries with their regions and cities nested. Useful for admin location management or preloading hierarchical filter data."
+					}
+				},
+				{
+					"name": "Get Countries",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/locations/countries",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"locations",
+								"countries"
+							]
+						},
+						"description": "Retrieve all countries for service forms and filters"
+					}
+				},
+				{
+					"name": "Get Regions by Country",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/locations/countries/{{countryId}}/regions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"locations",
+								"countries",
+								"{{countryId}}",
+								"regions"
+							]
+						},
+						"description": "Retrieve regions for a selected country"
+					}
+				},
+				{
+					"name": "Get Cities by Region",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/locations/regions/{{regionId}}/cities",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"locations",
+								"regions",
+								"{{regionId}}",
+								"cities"
+							]
+						},
+						"description": "Retrieve cities for a selected region"
+					}
+				}
+			],
+			"description": "Public location endpoints for browsing. Admin management endpoints are in Admin Endpoints > Location Management section."
+		},
+		{
+			"name": "Pricing Plan Endpoints",
+			"item": [
+				{
+					"name": "Get Active Pricing Plans",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/pricing-plans",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"pricing-plans"
+							]
+						},
+						"description": "Get all active pricing plans categorized by FREE, PROMO, and REGULAR tiers."
+					}
+				},
+				{
+					"name": "Get Pricing Eligibility",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/pricing-plans/eligibility",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"pricing-plans",
+								"eligibility"
+							]
+						},
+						"description": "Returns user lifecycle details (freePromoEndsAt, discountPromoEndsAt, isEligibleForFree, isEligibleForDiscount) and active plans with their locked/unlocked state."
+					}
+				}
+			],
+			"description": "Public pricing plan endpoints for browsing. Admin management endpoints are in Admin Endpoints > Pricing Management section."
+		},
+		{
+			"name": "Add Listing Flow",
+			"description": "Step-by-step workflow for user listing creation, pricing selection, payment, and admin moderation. **Note: All admin setup endpoints for categories, locations, and pricing are organized in the Admin Endpoints section. See Admin Endpoints > Category Management, Location Management, and Pricing Management for administration interface.**",
+			"item": [
+				{
+					"name": "Step 1 - Admin Setup (See Admin Endpoints Section)",
+					"item": [
+						{
+							"name": "⚠️ Moved to Admin Endpoints Section",
+							"description": "All admin setup operations (categories, locations, pricing plans) are now organized under Admin Endpoints with these sections:\n\n- Admin Endpoints > Category Management > Service Categories\n- Admin Endpoints > Category Management > Event Categories\n- Admin Endpoints > Location Management > Countries\n- Admin Endpoints > Location Management > Regions\n- Admin Endpoints > Location Management > Cities\n- Admin Endpoints > Pricing Management\n\nThis consolidation makes it easier to find and manage all admin operations in one place.",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										""
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Step 2 - User Load Form Data",
+					"item": [
+						{
+							"name": "Get Service Categories",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/categories/service/with-subcategories",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"categories",
+										"service",
+										"with-subcategories"
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Subcategories By Category",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/categories/service/{{serviceCategoryId}}/subcategories",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"categories",
+										"service",
+										"{{serviceCategoryId}}",
+										"subcategories"
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Countries",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/locations/countries",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"locations",
+										"countries"
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Regions By Country",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/locations/countries/{{countryId}}/regions",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"locations",
+										"countries",
+										"{{countryId}}",
+										"regions"
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Pricing Eligibility",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/pricing-plans/eligibility",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"pricing-plans",
+										"eligibility"
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Step 3 - User Create Listing",
+					"item": [
+						{
+							"name": "Create Service (User)",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 201) {",
+											"    const response = pm.response.json();",
+											"    if (response.data && response.data.id) {",
+											"        pm.collectionVariables.set('serviceId', response.data.id);",
+											"        console.log('Service ID saved to collection variables');",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "formdata",
+									"formdata": [
+										{
+											"key": "title",
+											"value": "Car Detailing Service",
+											"type": "text"
+										},
+										{
+											"key": "description",
+											"value": "Deep interior and exterior cleaning for a spotless vehicle finish.",
+											"type": "text"
+										},
+										{
+											"key": "price",
+											"value": "150",
+											"type": "text"
+										},
+										{
+											"key": "categoryId",
+											"value": "{{serviceCategoryId}}",
+											"type": "text"
+										},
+										{
+											"key": "subCategoryId",
+											"value": "{{serviceSubCategoryId}}",
+											"type": "text"
+										},
+										{
+											"key": "countryId",
+											"value": "{{countryId}}",
+											"type": "text"
+										},
+										{
+											"key": "regionId",
+											"value": "{{regionId}}",
+											"type": "text"
+										},
+										{
+											"key": "cityId",
+											"value": "{{cityId}}",
+											"type": "text"
+										},
+										{
+											"key": "address",
+											"value": "2464 Royal Ln. Mesa, New Jersey 45463",
+											"type": "text"
+										},
+										{
+											"key": "contactEmail",
+											"value": "auto@example.com",
+											"type": "text"
+										},
+										{
+											"key": "contactPhone",
+											"value": "+1-219-555-0114",
+											"type": "text"
+										},
+										{
+											"key": "facebookUrl",
+											"value": "https://facebook.com/eliteautocare",
+											"type": "text"
+										},
+										{
+											"key": "instagramUrl",
+											"value": "https://instagram.com/eliteautocare",
+											"type": "text"
+										},
+										{
+											"key": "serviceImages",
+											"type": "file",
+											"src": ""
+										},
+										{
+											"key": "serviceGallery",
+											"type": "file",
+											"src": ""
+										}
+									]
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/services",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"services"
+									]
+								}
+							}
+						}
+					]
+				},
+				{
+					"name": "Step 4 - Pricing & Payment",
+					"item": [
+						{
+							"name": "Get Stripe Config",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/pricing-plans/stripe-config",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"pricing-plans",
+										"stripe-config"
+									]
+								}
+							}
+						},
+						{
+							"name": "Get Active Pricing Plans",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/api/pricing-plans",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"pricing-plans"
+									]
+								}
+							}
+						},
+						{
+							"name": "Get User Pricing Eligibility",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/pricing-plans/eligibility",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"pricing-plans",
+										"eligibility"
+									]
+								},
+								"description": "Use the response fields data.userLifecycle.isEligibleForFree and isEligibleForDiscount on the frontend to decide which promotional tags/prices to show to the user."
+							}
+						},
+						{
+							"name": "Create Stripe Checkout Session",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    if (response.data && response.data.checkoutSessionId) {",
+											"        pm.collectionVariables.set('checkoutSessionId', response.data.checkoutSessionId);",
+											"        console.log('Checkout session ID saved to collection variables');",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"successUrl\": \"{{successUrl}}\",\n  \"cancelUrl\": \"{{cancelUrl}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/services/{{serviceId}}/purchase",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"services",
+										"{{serviceId}}",
+										"purchase"
+									]
+								},
+								"description": "Call this after the user submits the listing and clicks Buy Now in the pricing modal. Redirect the browser to the returned checkoutUrl on the frontend. Evaluates the new 3-tier rules."
+							}
+						},
+						{
+							"name": "Confirm Service Listing Payment",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"checkoutSessionId\": \"{{checkoutSessionId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/services/{{serviceId}}/purchase/confirm",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"services",
+										"{{serviceId}}",
+										"purchase",
+										"confirm"
+									]
+								},
+								"description": "For a new listing, successful confirmation keeps the listing in PENDING so admin can review it. Evaluates 3-tier rules."
+							}
+						},
+						{
+							"name": "Create Renew Checkout Session",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"if (pm.response.code === 200) {",
+											"    const response = pm.response.json();",
+											"    if (response.data && response.data.checkoutSessionId) {",
+											"        pm.collectionVariables.set('checkoutSessionId', response.data.checkoutSessionId);",
+											"    }",
+											"}"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"successUrl\": \"{{successUrl}}\",\n  \"cancelUrl\": \"{{cancelUrl}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/services/{{serviceId}}/renew",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"services",
+										"{{serviceId}}",
+										"renew"
+									]
+								},
+								"description": "Use this only for EXPIRED listings. It creates a Stripe checkout session for renewal and the frontend should redirect to checkoutUrl."
+							}
+						},
+						{
+							"name": "Confirm Renew Payment",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{userToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"checkoutSessionId\": \"{{checkoutSessionId}}\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/services/{{serviceId}}/renew/confirm",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"services",
+										"{{serviceId}}",
+										"renew",
+										"confirm"
+									]
+								},
+								"description": "Confirm a paid renewal checkout. On success, the expired listing becomes APPROVED again without admin review."
+							}
+						}
+					]
+				},
+				{
+					"name": "Step 5 - Admin Review",
+					"item": [
+						{
+							"name": "Get Pending Services For Admin",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/api/services/admin?status=PENDING&page=1&limit=20",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"services",
+										"admin"
+									],
+									"query": [
+										{
+											"key": "status",
+											"value": "PENDING"
+										},
+										{
+											"key": "page",
+											"value": "1"
+										},
+										{
+											"key": "limit",
+											"value": "20"
+										}
+									]
+								}
+							}
+						},
+						{
+							"name": "Approve Service (Admin)",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"APPROVED\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/services/{{serviceId}}/status",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"services",
+										"{{serviceId}}",
+										"status"
+									]
+								},
+								"description": "Admin approval publishes the service and starts the 30-day active window. After 30 days the listing becomes EXPIRED automatically."
+							}
+						},
+						{
+							"name": "Suspend Service (Admin)",
+							"request": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{adminToken}}",
+										"type": "text"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"SUSPENDED\"\n}"
+								},
+								"url": {
+									"raw": "{{baseUrl}}/api/services/{{serviceId}}/status",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"api",
+										"services",
+										"{{serviceId}}",
+										"status"
+									]
+								}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Service Endpoints",
+			"item": [
+				{
+					"name": "Create Service (User)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.collectionVariables.set('serviceId', response.data.id);",
+									"        console.log('Service ID saved to collection variables');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Car Detailing Service",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Deep interior and exterior cleaning for a spotless vehicle finish.",
+									"type": "text"
+								},
+								{
+									"key": "price",
+									"value": "150",
+									"type": "text"
+								},
+								{
+									"key": "categoryId",
+									"value": "{{serviceCategoryId}}",
+									"type": "text"
+								},
+								{
+									"key": "subCategoryId",
+									"value": "{{serviceSubCategoryId}}",
+									"type": "text"
+								},
+								{
+									"key": "countryId",
+									"value": "{{countryId}}",
+									"type": "text"
+								},
+								{
+									"key": "regionId",
+									"value": "{{regionId}}",
+									"type": "text"
+								},
+								{
+									"key": "cityId",
+									"value": "{{cityId}}",
+									"type": "text"
+								},
+								{
+									"key": "address",
+									"value": "2464 Royal Ln. Mesa, New Jersey 45463",
+									"type": "text"
+								},
+								{
+									"key": "contactEmail",
+									"value": "auto@example.com",
+									"type": "text"
+								},
+								{
+									"key": "contactPhone",
+									"value": "+1-219-555-0114",
+									"type": "text"
+								},
+								{
+									"key": "facebookUrl",
+									"value": "https://facebook.com/eliteautocare",
+									"type": "text"
+								},
+								{
+									"key": "instagramUrl",
+									"value": "https://instagram.com/eliteautocare",
+									"type": "text"
+								},
+								{
+									"key": "serviceImages",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "serviceImages",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "serviceGallery",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "serviceGallery",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/services",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services"
+							]
+						},
+						"description": "Logged-in user creates a service with multipart form-data. Upload multiple files using the serviceImages field and gallery files using the serviceGallery field. New services always start in PENDING status."
+					}
+				},
+				{
+					"name": "Create Stripe Checkout Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.checkoutSessionId) {",
+									"        pm.collectionVariables.set('checkoutSessionId', response.data.checkoutSessionId);",
+									"        console.log('Checkout session ID saved to collection variables');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"successUrl\": \"{{successUrl}}\",\n  \"cancelUrl\": \"{{cancelUrl}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{serviceId}}/purchase",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{serviceId}}",
+								"purchase"
+							]
+						},
+						"description": "Create a Stripe hosted checkout session for the selected service listing plan and redirect the user to the returned checkoutUrl."
+					}
+				},
+				{
+					"name": "Confirm Service Listing Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"checkoutSessionId\": \"{{checkoutSessionId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{serviceId}}/purchase/confirm",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{serviceId}}",
+								"purchase",
+								"confirm"
+							]
+						},
+						"description": "After Stripe redirects back to your frontend success page, send the checkoutSessionId here so the backend can verify payment and move the listing into admin review."
+					}
+				},
+				{
+					"name": "Create Renew Checkout Session",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"successUrl\": \"{{successUrl}}\",\n  \"cancelUrl\": \"{{cancelUrl}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{serviceId}}/renew",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{serviceId}}",
+								"renew"
+							]
+						},
+						"description": "Dedicated renew endpoint for expired listings. Use this when the user clicks the Renew button."
+					}
+				},
+				{
+					"name": "Confirm Renew Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"checkoutSessionId\": \"{{checkoutSessionId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{serviceId}}/renew/confirm",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{serviceId}}",
+								"renew",
+								"confirm"
+							]
+						},
+						"description": "Dedicated renewal confirmation endpoint. Successful payment makes the expired listing live again without admin review."
+					}
+				},
+				{
+					"name": "Report Service Spam",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{serviceId}}/report-spam",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{serviceId}}",
+								"report-spam"
+							]
+						},
+						"description": "Public endpoint for the service details page Report Spam button. Increments the spamReports count for the service."
+					}
+				},
+				{
+					"name": "Get Public Services",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/services?categoryId={{serviceCategoryId}}&subCategoryId={{serviceSubCategoryId}}&countryId={{countryId}}&regionId={{regionId}}&cityId={{cityId}}&search=cleaning&priceRange=from100to300&minPrice=50&maxPrice=500&sortBy=createdAt&sortOrder=desc&page=1&limit=12",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services"
+							],
+							"query": [
+								{
+									"key": "categoryId",
+									"value": "{{serviceCategoryId}}",
+									"description": "Optional. Filter by service category id"
+								},
+								{
+									"key": "subCategoryId",
+									"value": "{{serviceSubCategoryId}}",
+									"description": "Optional. Filter by service subcategory id"
+								},
+								{
+									"key": "countryId",
+									"value": "{{countryId}}",
+									"description": "Optional. Filter by country id"
+								},
+								{
+									"key": "regionId",
+									"value": "{{regionId}}",
+									"description": "Optional. Filter by region id"
+								},
+								{
+									"key": "cityId",
+									"value": "{{cityId}}",
+									"description": "Optional. Filter by city id"
+								},
+								{
+									"key": "search",
+									"value": "cleaning",
+									"description": "Optional text search on title and description"
+								},
+								{
+									"key": "priceRange",
+									"value": "from100to300",
+									"description": "Optional preset values: all, under20, from25to100, from100to300, from300to500, from500to1000, from1000to10000, and 500plus (or 500+). Also accepts custom patterns like under50 or from100to450"
+								},
+								{
+									"key": "minPrice",
+									"value": "50",
+									"description": "Optional numeric minimum price"
+								},
+								{
+									"key": "maxPrice",
+									"value": "500",
+									"description": "Optional numeric maximum price"
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Optional page number, minimum 1"
+								},
+								{
+									"key": "limit",
+									"value": "12",
+									"description": "Optional page size, 1 to 100"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"description": "Allowed values: createdAt, price, title"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"description": "Allowed values: asc, desc"
+								}
+							]
+						},
+							"description": "Get approved services for the website. Supported query params: categoryId, subCategoryId, countryId, regionId, cityId, search, priceRange, minPrice, maxPrice, sortBy, sortOrder, page, limit. sortBy supports createdAt, price, title. sortOrder supports asc or desc. priceRange supports all, under20, from25to100, from100to300, from300to500, from500to1000, from1000to10000, and 500plus (or 500+), plus custom patterns like under50 or from100to450."
+					}
+				},
+				{
+					"name": "Get Filtered Services",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/services?categoryId={{serviceCategoryId}}&subCategoryId={{serviceSubCategoryId}}&countryId={{countryId}}&regionId={{regionId}}&cityId={{cityId}}&priceRange=from100to300&sortBy=price&sortOrder=asc",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services"
+							],
+							"query": [
+								{
+									"key": "categoryId",
+									"value": "{{serviceCategoryId}}"
+								},
+								{
+									"key": "subCategoryId",
+									"value": "{{serviceSubCategoryId}}"
+								},
+								{
+									"key": "countryId",
+									"value": "{{countryId}}"
+								},
+								{
+									"key": "regionId",
+									"value": "{{regionId}}"
+								},
+								{
+									"key": "cityId",
+									"value": "{{cityId}}"
+								},
+								{
+									"key": "priceRange",
+									"value": "from100to300"
+								},
+								{
+									"key": "sortBy",
+									"value": "price"
+								},
+								{
+									"key": "sortOrder",
+									"value": "asc"
+								}
+							]
+						},
+							"description": "Example filtered services request. Query params supported here are categoryId, subCategoryId, countryId, regionId, cityId, search, priceRange, minPrice, maxPrice, sortBy, sortOrder, page, and limit. Allowed sortBy values: createdAt, price, title. Allowed sortOrder values: asc, desc. Allowed priceRange values: all, under20, from25to100, from100to300, from300to500, from500to1000, from1000to10000, or custom patterns like under50 and from100to450."
+					}
+				},
+				{
+					"name": "Get Service By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{serviceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{serviceId}}"
+							]
+						},
+						"description": "Get a single approved service for the public website"
+					}
+				},
+				{
+					"name": "Get My Services",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/services/me?status=EXPIRED&search=&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"me"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "EXPIRED",
+									"description": "Optional. Filter: PENDING, APPROVED, SUSPENDED, EXPIRED"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Optional. Search in title/description",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Items per page"
+								}
+							]
+						},
+						"description": "Logged-in user sees their own services with status filter (PENDING, APPROVED, SUSPENDED, EXPIRED) and search. Can filter to show expired listings for renewal."
+					}
+				},
+				{
+					"name": "Update My Service",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Updated Car Wash Service",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Updated description for car wash",
+									"type": "text"
+								},
+								{
+									"key": "price",
+									"value": "1899",
+									"type": "text"
+								},
+								{
+									"key": "contactEmail",
+									"value": "updated@example.com",
+									"type": "text"
+								},
+								{
+									"key": "contactPhone",
+									"value": "+1-555-9999",
+									"type": "text"
+								},
+								{
+									"key": "countryId",
+									"value": "{{countryId}}",
+									"type": "text"
+								},
+								{
+									"key": "regionId",
+									"value": "{{regionId}}",
+									"type": "text"
+								},
+								{
+									"key": "cityId",
+									"value": "{{cityId}}",
+									"type": "text"
+								},
+								{
+									"key": "categoryId",
+									"value": "{{serviceCategoryId}}",
+									"type": "text"
+								},
+								{
+									"key": "mainImage",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/services/me/{{serviceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"me",
+								"{{serviceId}}"
+							]
+						},
+						"description": "User updates their own service listing"
+					}
+				},
+				{
+					"name": "Delete My Service",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/services/me/{{serviceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"me",
+								"{{serviceId}}"
+							]
+						},
+						"description": "User deletes (soft delete) their own service listing"
+					}
+				},
+				{
+					"name": "Get Services For Admin",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/services/admin?status=PENDING&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"admin"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "PENDING",
+									"description": "Optional. Allowed values: PENDING, APPROVED, SUSPENDED, EXPIRED"
+								},
+								{
+									"key": "categoryId",
+									"value": "",
+									"description": "Optional. Filter by category ID",
+									"disabled": true
+								},
+								{
+									"key": "subCategoryId",
+									"value": "",
+									"description": "Optional. Filter by subcategory ID",
+									"disabled": true
+								},
+								{
+									"key": "countryId",
+									"value": "",
+									"description": "Optional. Filter by country ID",
+									"disabled": true
+								},
+								{
+									"key": "regionId",
+									"value": "",
+									"description": "Optional. Filter by region ID",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Optional. Search in title, description, or user name",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Optional page number, minimum 1"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Optional page size, 1 to 100"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"description": "Optional. Allowed values: createdAt, price, title"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"description": "Optional. Allowed values: asc, desc"
+								}
+							]
+						},
+						"description": "Admin reviews paid services by moderation status. Returns listings with spamReports count. Supported query params: status, categoryId, subCategoryId, countryId, regionId, search, page, limit, sortBy, sortOrder. Allowed status values: PENDING, APPROVED, SUSPENDED, EXPIRED. Allowed sortBy values: createdAt, price, title. Allowed sortOrder values: asc, desc."
+					}
+				},
+				{
+					"name": "Get Expired Services For Admin",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/services/admin?status=EXPIRED&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"admin"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "EXPIRED"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Admin can inspect listings that expired after their 30-day active window. Renewed listings move back to APPROVED automatically after successful payment confirmation."
+					}
+				},
+				{
+					"name": "Approve Service (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"APPROVED\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{serviceId}}/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{serviceId}}",
+								"status"
+							]
+						},
+						"description": "Admin approves a pending service. This sets the publish date and starts the 30-day active period before the listing becomes EXPIRED."
+					}
+				},
+				{
+					"name": "Suspend Service (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"SUSPENDED\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{serviceId}}/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{serviceId}}",
+								"status"
+							]
+						},
+						"description": "Admin suspends a service"
+					}
+				},
+				{
+					"name": "Delete Service (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/services/{{serviceId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"services",
+								"{{serviceId}}"
+							]
+						},
+						"description": "Admin performs soft delete on a service listing. The listing will be marked as deleted and won't appear in any queries."
+					}
+				}
+			],
+			"description": "Service creation, moderation, and public website listing endpoints."
+		},
+		{
+			"name": "Event Endpoints",
+			"item": [
+				{
+					"name": "Create Event (User)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.id) {",
+									"        pm.collectionVariables.set('eventId', response.data.id);",
+									"        console.log('Event ID saved to collection variables');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Wedding Reception",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Elegant evening event with live music, dinner, and curated guest experiences.",
+									"type": "text"
+								},
+								{
+									"key": "price",
+									"value": "299",
+									"type": "text"
+								},
+								{
+									"key": "categoryId",
+									"value": "{{eventCategoryId}}",
+									"type": "text"
+								},
+								{
+									"key": "countryId",
+									"value": "{{countryId}}",
+									"type": "text"
+								},
+								{
+									"key": "regionId",
+									"value": "{{regionId}}",
+									"type": "text"
+								},
+								{
+									"key": "cityId",
+									"value": "{{cityId}}",
+									"type": "text"
+								},
+								{
+									"key": "location",
+									"value": "Grand Hall, 45 Sunset Avenue, Los Angeles, CA",
+									"type": "text"
+								},
+								{
+									"key": "eventStart",
+									"value": "2026-05-20T18:00:00.000Z",
+									"type": "text"
+								},
+								{
+									"key": "eventEnd",
+									"value": "2026-05-20T23:00:00.000Z",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "events@example.com",
+									"type": "text"
+								},
+								{
+									"key": "phone",
+									"value": "+1-219-555-0109",
+									"type": "text"
+								},
+								{
+									"key": "facebook",
+									"value": "https://facebook.com/signatureevents",
+									"type": "text"
+								},
+								{
+									"key": "instagram",
+									"value": "https://instagram.com/signatureevents",
+									"type": "text"
+								},
+								{
+									"key": "eventImages",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "eventImages",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "eventGallery",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "eventGallery",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/events",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events"
+							]
+						},
+						"description": "Logged-in user creates an event with multipart form-data. Upload multiple files using the eventImages field and gallery files using the eventGallery field. New events always start in PENDING status."
+					}
+				},
+				{
+					"name": "Create Event Stripe Checkout Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.data && response.data.checkoutSessionId) {",
+									"        pm.collectionVariables.set('checkoutSessionId', response.data.checkoutSessionId);",
+									"        console.log('Checkout session ID saved to collection variables');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"successUrl\": \"{{successUrl}}\",\n  \"cancelUrl\": \"{{cancelUrl}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/events/{{eventId}}/purchase",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"{{eventId}}",
+								"purchase"
+							]
+						},
+						"description": "Create a Stripe hosted checkout session for the selected event listing plan and redirect the user to the returned checkoutUrl."
+					}
+				},
+				{
+					"name": "Confirm Event Listing Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"checkoutSessionId\": \"{{checkoutSessionId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/events/{{eventId}}/purchase/confirm",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"{{eventId}}",
+								"purchase",
+								"confirm"
+							]
+						},
+						"description": "After Stripe redirects back to your frontend success page, send the checkoutSessionId here so the backend can verify payment and move the event into admin review."
+					}
+				},
+				{
+					"name": "Create Event Renew Checkout Session",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"successUrl\": \"{{successUrl}}\",\n  \"cancelUrl\": \"{{cancelUrl}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/events/{{eventId}}/renew",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"{{eventId}}",
+								"renew"
+							]
+						},
+						"description": "Dedicated renew endpoint for expired events. Use this when the user clicks the Renew button."
+					}
+				},
+				{
+					"name": "Confirm Event Renew Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"planId\": \"{{pricingPlanId}}\",\n  \"checkoutSessionId\": \"{{checkoutSessionId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/events/{{eventId}}/renew/confirm",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"{{eventId}}",
+								"renew",
+								"confirm"
+							]
+						},
+						"description": "Dedicated renewal confirmation endpoint. Successful payment makes the expired event live again without admin review."
+					}
+				},
+				{
+					"name": "Report Event Spam",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/events/{{eventId}}/report-spam",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"{{eventId}}",
+								"report-spam"
+							]
+						},
+						"description": "Public endpoint for the event details page Report Spam button. Increments the spamReports count for the event."
+					}
+				},
+				{
+					"name": "Get Public Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/events?categoryId={{eventCategoryId}}&countryId={{countryId}}&regionId={{regionId}}&cityId={{cityId}}&search=festival&priceRange=from100to300&minPrice=50&maxPrice=500&sortBy=createdAt&sortOrder=desc&page=1&limit=12",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events"
+							],
+							"query": [
+								{
+									"key": "categoryId",
+									"value": "{{eventCategoryId}}",
+									"description": "Optional. Filter by event category id"
+								},
+								{
+									"key": "countryId",
+									"value": "{{countryId}}",
+									"description": "Optional. Filter by country id"
+								},
+								{
+									"key": "regionId",
+									"value": "{{regionId}}",
+									"description": "Optional. Filter by region id"
+								},
+								{
+									"key": "cityId",
+									"value": "{{cityId}}",
+									"description": "Optional. Filter by city id"
+								},
+								{
+									"key": "search",
+									"value": "festival",
+									"description": "Optional text search on title and description"
+								},
+								{
+									"key": "priceRange",
+									"value": "from100to300",
+									"description": "Optional preset values: all, under20, from25to100, from100to300, from300to500, from500to1000, from1000to10000, and 500plus (or 500+). Also accepts custom patterns like under50 or from100to450"
+								},
+								{
+									"key": "minPrice",
+									"value": "50",
+									"description": "Optional numeric minimum price"
+								},
+								{
+									"key": "maxPrice",
+									"value": "500",
+									"description": "Optional numeric maximum price"
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Optional page number, minimum 1"
+								},
+								{
+									"key": "limit",
+									"value": "12",
+									"description": "Optional page size, 1 to 100"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"description": "Allowed values: createdAt, price, title, startDate"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"description": "Allowed values: asc, desc"
+								}
+							]
+						},
+							"description": "Get approved events for the website. Supported query params: categoryId, countryId, regionId, cityId, search, priceRange, minPrice, maxPrice, sortBy, sortOrder, page, limit. sortBy supports createdAt, price, title, startDate. sortOrder supports asc or desc. priceRange supports all, under20, from25to100, from100to300, from300to500, from500to1000, from1000to10000, and 500plus (or 500+), plus custom patterns like under50 or from100to450."
+					}
+				},
+				{
+					"name": "Get Filtered Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/events?categoryId={{eventCategoryId}}&countryId={{countryId}}&regionId={{regionId}}&cityId={{cityId}}&priceRange=from100to300&sortBy=price&sortOrder=asc",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events"
+							],
+							"query": [
+								{
+									"key": "categoryId",
+									"value": "{{eventCategoryId}}"
+								},
+								{
+									"key": "countryId",
+									"value": "{{countryId}}"
+								},
+								{
+									"key": "regionId",
+									"value": "{{regionId}}"
+								},
+								{
+									"key": "cityId",
+									"value": "{{cityId}}"
+								},
+								{
+									"key": "priceRange",
+									"value": "from100to300"
+								},
+								{
+									"key": "sortBy",
+									"value": "price"
+								},
+								{
+									"key": "sortOrder",
+									"value": "asc"
+								}
+							]
+						},
+							"description": "Example filtered events request. Query params supported here are categoryId, countryId, regionId, cityId, search, priceRange, minPrice, maxPrice, sortBy, sortOrder, page, and limit. Events do not use subCategoryId. Allowed sortBy values: createdAt, price, title, startDate. Allowed sortOrder values: asc, desc. Allowed priceRange values: all, under20, from25to100, from100to300, from300to500, from500to1000, from1000to10000, or 500plus (or 500+), plus custom patterns like under50 and from100to450."
+					}
+				},
+				{
+					"name": "Get Event By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/events/{{eventId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"{{eventId}}"
+							]
+						},
+						"description": "Get a single approved event for the public website"
+					}
+				},
+				{
+					"name": "Get My Events",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/events/me?status=EXPIRED&search=&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"me"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "EXPIRED",
+									"description": "Optional. Filter: PENDING, APPROVED, SUSPENDED, EXPIRED"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Optional. Search in title/description",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Items per page"
+								}
+							]
+						},
+						"description": "Logged-in user sees their own events with status filter (PENDING, APPROVED, SUSPENDED, EXPIRED) and search. Can filter to show expired events for renewal."
+					}
+				},
+				{
+					"name": "Update My Event",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Updated Wedding Reception",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Updated description for wedding event",
+									"type": "text"
+								},
+								{
+									"key": "price",
+									"value": "5999",
+									"type": "text"
+								},
+								{
+									"key": "startDate",
+									"value": "2026-06-15T18:00:00.000Z",
+									"type": "text"
+								},
+								{
+									"key": "endDate",
+									"value": "2026-06-15T23:00:00.000Z",
+									"type": "text"
+								},
+								{
+									"key": "contactEmail",
+									"value": "updated@example.com",
+									"type": "text"
+								},
+								{
+									"key": "contactPhone",
+									"value": "+1-555-9999",
+									"type": "text"
+								},
+								{
+									"key": "countryId",
+									"value": "{{countryId}}",
+									"type": "text"
+								},
+								{
+									"key": "regionId",
+									"value": "{{regionId}}",
+									"type": "text"
+								},
+								{
+									"key": "cityId",
+									"value": "{{cityId}}",
+									"type": "text"
+								},
+								{
+									"key": "categoryId",
+									"value": "{{eventCategoryId}}",
+									"type": "text"
+								},
+								{
+									"key": "mainImage",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/events/me/{{eventId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"me",
+								"{{eventId}}"
+							]
+						},
+						"description": "User updates their own event listing"
+					}
+				},
+				{
+					"name": "Delete My Event",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{userToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/events/me/{{eventId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"me",
+								"{{eventId}}"
+							]
+						},
+						"description": "User deletes (soft delete) their own event listing"
+					}
+				},
+				{
+					"name": "Get Events For Admin",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/events/admin?status=PENDING&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"admin"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "PENDING",
+									"description": "Optional. Allowed values: PENDING, APPROVED, SUSPENDED, EXPIRED"
+								},
+								{
+									"key": "categoryId",
+									"value": "",
+									"description": "Optional. Filter by category ID",
+									"disabled": true
+								},
+								{
+									"key": "countryId",
+									"value": "",
+									"description": "Optional. Filter by country ID",
+									"disabled": true
+								},
+								{
+									"key": "regionId",
+									"value": "",
+									"description": "Optional. Filter by region ID",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Optional. Search in title, description, or user name",
+									"disabled": true
+								},
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Optional page number, minimum 1"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Optional page size, 1 to 100"
+								},
+								{
+									"key": "sortBy",
+									"value": "createdAt",
+									"description": "Optional. Allowed values: createdAt, price, title, startDate"
+								},
+								{
+									"key": "sortOrder",
+									"value": "desc",
+									"description": "Optional. Allowed values: asc, desc"
+								}
+							]
+						},
+						"description": "Admin reviews paid events by moderation status. Returns listings with spamReports count. Supported query params: status, categoryId, countryId, regionId, search, page, limit, sortBy, sortOrder. Allowed status values: PENDING, APPROVED, SUSPENDED, EXPIRED. Allowed sortBy values: createdAt, price, title, startDate. Allowed sortOrder values: asc, desc."
+					}
+				},
+				{
+					"name": "Get Expired Events For Admin",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/events/admin?status=EXPIRED&page=1&limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"admin"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "EXPIRED"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Admin can inspect events that expired after their 30-day active window. Renewed events move back to APPROVED automatically after successful payment confirmation."
+					}
+				},
+				{
+					"name": "Approve Event (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"APPROVED\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/events/{{eventId}}/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"{{eventId}}",
+								"status"
+							]
+						},
+						"description": "Admin approves a pending event. This sets the publish date and starts the 30-day active period before the event becomes EXPIRED."
+					}
+				},
+				{
+					"name": "Suspend Event (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"SUSPENDED\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/events/{{eventId}}/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"{{eventId}}",
+								"status"
+							]
+						},
+						"description": "Admin suspends an event"
+					}
+				},
+				{
+					"name": "Delete Event (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/events/{{eventId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"events",
+								"{{eventId}}"
+							]
+						},
+						"description": "Admin performs soft delete on an event listing. The event will be marked as deleted and won't appear in any queries."
+					}
+				}
+			],
+			"description": "Event creation, moderation, renew, and public website listing endpoints."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

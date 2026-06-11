@@ -22,10 +22,10 @@ class AuthController {
       const { fullName, email, password, confirmPassword, phoneNumber, countryName, regionName, cityName } = req.body;
 
       // Validation
-      if (!fullName || !email || !password || !confirmPassword || !countryName || !regionName || !cityName) {
+      if (!fullName || !email || !password || !confirmPassword || !countryName || !regionName) {
         return res.status(400).json({
           success: false,
-          error: 'Full name, email, password, confirm password, country, region and city are required'
+          error: 'Full name, email, password, confirm password, country, and region are required'
         });
       }
 
