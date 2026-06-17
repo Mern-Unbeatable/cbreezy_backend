@@ -1,4 +1,6 @@
 import cloudinary, { isCloudinaryConfigured } from "../config/cloudinary.js";
+import fs from "fs";
+import path from "path";
 
 const getCloudinaryFolder = (fieldname) => {
   if (fieldname === "profileImage") {
@@ -48,10 +50,47 @@ export const processCloudinaryUploads = async (req) => {
       return;
     }
 
-    file.cloudinaryUrl = await uploadBufferToCloudinary(
-      file,
-      getCloudinaryFolder(file.fieldname),
-    );
+    try {
+      file.cloudinaryUrl = await uploadBufferToCloudinary(
+        file,
+        getCloudinaryFolder(file.fieldname),
+      );
+    } catch (err) {
+      // Fallback: save file to local uploads directory so previous behavior remains.
+      // Map fieldname to local upload folder (mirrors middleware paths)
+      const uploadsRoot = path.resolve(process.cwd(), "uploads");
+      const mapping = {
+        profileImage: path.join(uploadsRoot, "users", "profiles"),
+        image: path.join(uploadsRoot, "categories", "images"),
+        eventGallery: path.join(uploadsRoot, "events", "gallery"),
+        eventImage: path.join(uploadsRoot, "events", "images"),
+        eventImages: path.join(uploadsRoot, "events", "images"),
+        serviceGallery: path.join(uploadsRoot, "services", "gallery"),
+        gallery: path.join(uploadsRoot, "services", "gallery")
+      };
+
+      const folder = mapping[file.fieldname] || path.join(uploadsRoot, "services", "images");
+      fs.mkdirSync(folder, { recursive: true });
+
+      const extension = path.extname(file.originalname) || ".jpg";
+      const sanitizedBaseName = path
+        .basename(file.originalname, extension)
+        .replace(/[^a-zA-Z0-9-_]/g, "-")
+        .replace(/-+/g, "-")
+        .toLowerCase();
+      const filename = `${Date.now()}-${sanitizedBaseName}${extension.toLowerCase()}`;
+      const savedPath = path.join(folder, filename);
+
+      try {
+        fs.writeFileSync(savedPath, file.buffer);
+        // set file.path so other parts of the app can use the local path
+        file.path = savedPath;
+        file.cloudinaryUrl = null;
+      } catch (fsErr) {
+        // If even local write fails, rethrow the original cloudinary error for visibility
+        throw err;
+      }
+    }
   };
 
   if (req.file) {
