@@ -2,16 +2,38 @@ import "dotenv/config";
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
-const requiredEnvVars = [
-  'FIREBASE_PROJECT_ID',
-  'FIREBASE_CLIENT_EMAIL'
-];
+const normalizePrivateKey = (privateKey) => {
+  if (!privateKey) {
+    return privateKey;
+  }
+
+  let key = privateKey.trim();
+
+  if (
+    (key.startsWith('"') && key.endsWith('"')) ||
+    (key.startsWith("'") && key.endsWith("'"))
+  ) {
+    key = key.slice(1, -1).trim();
+  }
+
+  return key
+    .split('\\n')
+    .join('\n')
+    .split('\\r')
+    .join('\r')
+    .trim();
+};
 
 const getFirebaseCredential = () => {
-  // Check if using service account JSON (preferred method)
+  // Preferred: full service account JSON from Firebase Console download
   if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     try {
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = normalizePrivateKey(serviceAccount.private_key);
+      }
+
       return cert(serviceAccount);
     } catch (e) {
       console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:', e.message);
@@ -42,28 +64,12 @@ const getFirebaseCredential = () => {
 
   // Legacy fallback: Parse plain text private key with escape sequences
   if (process.env.FIREBASE_PRIVATE_KEY) {
-    let privateKey = process.env.FIREBASE_PRIVATE_KEY;
-    
+    const privateKey = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY);
+
     if (!privateKey) {
       throw new Error('FIREBASE_PRIVATE_KEY is empty');
     }
 
-    privateKey = privateKey.trim();
-
-    // Handle quotes
-    if ((privateKey.startsWith('"') && privateKey.endsWith('"')) || 
-        (privateKey.startsWith("'") && privateKey.endsWith("'"))) {
-      privateKey = privateKey.slice(1, -1).trim();
-    }
-    
-    // Convert escape sequences to actual newlines
-    privateKey = privateKey.split('\\n').join('\n');
-    privateKey = privateKey.split('\\r').join('\r');
-    privateKey = privateKey.split('\\t').join('\t');
-    
-    privateKey = privateKey.trim();
-    
-    // Validate
     if (!privateKey.includes('BEGIN PRIVATE KEY') || !privateKey.includes('END PRIVATE KEY')) {
       throw new Error('FIREBASE_PRIVATE_KEY is not in valid PEM format');
     }
@@ -71,13 +77,14 @@ const getFirebaseCredential = () => {
     return cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: privateKey
+      privateKey
     });
   }
 
-  const missingEnvVars = ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 
-    '(FIREBASE_SERVICE_ACCOUNT_JSON or FIREBASE_PRIVATE_KEY_BASE64 or FIREBASE_PRIVATE_KEY)'];
-  throw new Error(`Missing Firebase configuration: ${missingEnvVars.join(', ')}`);
+  throw new Error(
+    'Missing Firebase configuration. Set FIREBASE_SERVICE_ACCOUNT_JSON (recommended). ' +
+    'Download the JSON key from Firebase Console > Project Settings > Service Accounts.'
+  );
 };
 
 const getFirebaseAuth = () => {
