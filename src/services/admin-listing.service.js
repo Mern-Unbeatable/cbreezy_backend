@@ -118,9 +118,11 @@ class AdminListingService {
 
       const where = {
         deletedAt: null,
+        // Only include listings that have a successful paid payment
         payments: {
           some: {
-            status: 'SUCCESS'
+            status: 'SUCCESS',
+            amount: { gt: 0 }
           }
         },
         ...(status ? { status } : {}),
