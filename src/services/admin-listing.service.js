@@ -118,11 +118,10 @@ class AdminListingService {
 
       const where = {
         deletedAt: null,
-        // Only include listings that have a successful paid payment
+        // Only listings with a completed payment (free plan amount=0 or paid plan amount>0)
         payments: {
           some: {
-            status: 'SUCCESS',
-            amount: { gt: 0 }
+            status: 'SUCCESS'
           }
         },
         ...(status ? { status } : {}),
