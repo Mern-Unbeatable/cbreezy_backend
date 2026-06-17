@@ -713,7 +713,7 @@
 //         ...(phoneNumber !== undefined ? { phoneNumber: normalizedPhoneNumber } : {}),
 //         ...(countryId !== undefined ? { countryId: normalizedCountryId } : {}),
 //         ...(regionId !== undefined ? { regionId: normalizedRegionId } : {}),
-//         ...(file ? { profileImage: toPublicUploadPath(file.path) } : {})
+//         ...(file ? { profileImage: getUploadedFileUrl(file) } : {})
 //       },
 //       select: {
 //         id: true,
@@ -761,23 +761,7 @@ import { generateToken } from '../utils/jwtUtils.js';
 import otpStore from '../utils/otpStore.js';
 import emailService from '../utils/emailService.js';
 import { createHttpError } from '../utils/httpError.js';
-
-const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
-
-const toPublicUploadPath = (filePath) => `/${filePath.split('uploads')[1].replace(/\\/g, '/').replace(/^\//, 'uploads/')}`;
-
-const toAbsoluteMediaUrl = (baseUrl, mediaPath) => {
-  if (!mediaPath) {
-    return mediaPath;
-  }
-
-  if (ABSOLUTE_URL_PATTERN.test(mediaPath)) {
-    return mediaPath;
-  }
-
-  const normalizedPath = mediaPath.startsWith('/') ? mediaPath : `/${mediaPath}`;
-  return `${baseUrl}${normalizedPath}`;
-};
+import { getUploadedFileUrl, toAbsoluteMediaUrl } from '../utils/media.js';
 
 const serializeUserProfile = (baseUrl, user) => {
   if (!user) {
@@ -1493,7 +1477,7 @@ class AuthService {
         ...(phoneNumber !== undefined ? { phoneNumber: normalizedPhoneNumber } : {}),
         ...(countryId !== undefined ? { countryId: normalizedCountryId } : {}),
         ...(regionId !== undefined ? { regionId: normalizedRegionId } : {}),
-        ...(file ? { profileImage: toPublicUploadPath(file.path) } : {})
+        ...(file ? { profileImage: getUploadedFileUrl(file) } : {})
       },
       select: {
         id: true,

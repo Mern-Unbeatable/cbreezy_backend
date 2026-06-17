@@ -3,20 +3,7 @@ import { createHttpError } from '../utils/httpError.js';
 
 const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
 
-const toPublicUploadPath = (filePath) => `/${filePath.split('uploads')[1].replace(/\\/g, '/').replace(/^\//, 'uploads/')}`;
-
-const toAbsoluteMediaUrl = (baseUrl, mediaPath) => {
-  if (!mediaPath) {
-    return mediaPath;
-  }
-
-  if (ABSOLUTE_URL_PATTERN.test(mediaPath)) {
-    return mediaPath;
-  }
-
-  const normalizedPath = mediaPath.startsWith('/') ? mediaPath : `/${mediaPath}`;
-  return `${baseUrl}${normalizedPath}`;
-};
+import { getUploadedFileUrl, toAbsoluteMediaUrl } from '../utils/media.js';
 
 const serializeCategoryImage = (baseUrl, category) => ({
   ...category,
@@ -35,7 +22,7 @@ const buildCategoryUpdatePayload = ({ name, file }) => {
   }
 
   if (file?.path) {
-    data.image = toPublicUploadPath(file.path);
+    data.image = getUploadedFileUrl(file);
   }
 
   if (!Object.keys(data).length) {

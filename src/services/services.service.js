@@ -2,7 +2,6 @@ import prisma from '../config/prisma.js';
 import { STRIPE_CURRENCY, getStripeClient, getStripePublishableKey } from '../config/stripe.js';
 import { createHttpError } from '../utils/httpError.js';
 
-const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
 const LISTING_STATUSES = ['PENDING', 'APPROVED', 'SUSPENDED', 'EXPIRED'];
 const MODERATABLE_STATUSES = ['PENDING', 'APPROVED', 'SUSPENDED'];
 const SORTABLE_FIELDS = ['createdAt', 'price', 'title'];
@@ -18,20 +17,7 @@ const PRICE_RANGE_MAP = {
 const INTRODUCTORY_PERIOD_DAYS = 90;
 const LISTING_ACTIVE_DAYS = 30;
 
-const toPublicUploadPath = (filePath) => `/${filePath.split('uploads')[1].replace(/\\/g, '/').replace(/^\//, 'uploads/')}`;
-
-const toAbsoluteMediaUrl = (baseUrl, mediaPath) => {
-  if (!mediaPath) {
-    return mediaPath;
-  }
-
-  if (ABSOLUTE_URL_PATTERN.test(mediaPath)) {
-    return mediaPath;
-  }
-
-  const normalizedPath = mediaPath.startsWith('/') ? mediaPath : `/${mediaPath}`;
-  return `${baseUrl}${normalizedPath}`;
-};
+import { getUploadedFileUrl, toAbsoluteMediaUrl } from '../utils/media.js';
 
 const serializeListingMedia = (baseUrl, listing) => {
   if (!listing) {
@@ -323,12 +309,12 @@ class ListingService {
         ...(files?.serviceImages || []),
         ...(files?.serviceImage || []),
         ...(files?.mainImage || [])
-      ].map((file) => toPublicUploadPath(file.path));
+      ].map((file) => getUploadedFileUrl(file));
 
       const uploadedServiceGallery = [
         ...(files?.serviceGallery || []),
         ...(files?.gallery || [])
-      ].map((file) => toPublicUploadPath(file.path));
+      ].map((file) => getUploadedFileUrl(file));
 
       const bodyServiceImages = normalizeStringArray(serviceImages);
       const bodyServiceGallery = normalizeStringArray(serviceGallery).concat(normalizeStringArray(gallery));
@@ -760,13 +746,13 @@ class ListingService {
 
       if (files) {
         if (files.mainImage && files.mainImage[0]) {
-          updateData.mainImage = toPublicUploadPath(files.mainImage[0].path);
+          updateData.mainImage = getUploadedFileUrl(files.mainImage[0]);
         }
         if (files.serviceImages) {
-          updateData.serviceImages = files.serviceImages.map((file) => toPublicUploadPath(file.path));
+          updateData.serviceImages = files.serviceImages.map((file) => getUploadedFileUrl(file));
         }
         if (files.gallery) {
-          updateData.gallery = files.gallery.map((file) => toPublicUploadPath(file.path));
+          updateData.gallery = files.gallery.map((file) => getUploadedFileUrl(file));
         }
       }
 
@@ -1179,6 +1165,89 @@ class ListingService {
 
       if (!isRenewal && listing.payments?.some((payment) => payment.status === 'SUCCESS')) {
         throw createHttpError(409, 'This service listing has already been paid for');
+      }
+
+      // If the selected plan is free (price <= 0), finalize the purchase server-side without creating a Stripe session.
+      if (!plan.price || Number(plan.price) <= 0) {
+        const renewalPublishedAt = new Date();
+        const renewalExpiresAt = getListingExpiryDate(renewalPublishedAt);
+
+        const result = await prisma.$transaction(async (tx) => {
+          // Create payment record (no stripeSessionId)
+          const existingFreePayment = await tx.payment.findFirst({
+            where: { listingId: listing.id, status: 'SUCCESS' }
+          });
+
+          if (!isRenewal && existingFreePayment) {
+            throw createHttpError(409, 'This service listing has already been paid for');
+          }
+
+          const generatedSessionId = `free-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+          const payment = await tx.payment.create({
+            data: {
+              stripeSessionId: generatedSessionId,
+              amount: plan.price,
+              status: 'SUCCESS',
+              listingId: listing.id,
+              userId
+            }
+          });
+
+          const subscription = isRenewal
+            ? await tx.subscription.upsert({
+                where: { listingId: listing.id },
+                update: {
+                  planType: plan.title,
+                  startDate: renewalPublishedAt,
+                  endDate: renewalExpiresAt,
+                  isActive: true
+                },
+                create: {
+                  listingId: listing.id,
+                  planType: plan.title,
+                  startDate: renewalPublishedAt,
+                  endDate: renewalExpiresAt,
+                  isActive: true
+                }
+              })
+            : await tx.subscription.updateMany({
+                where: { listingId: listing.id },
+                data: { isActive: false }
+              }).then(() => null);
+
+          await tx.listing.update({
+            where: { id: listing.id },
+            data: {
+              status: isRenewal ? 'APPROVED' : 'PENDING',
+              publishedAt: isRenewal ? renewalPublishedAt : listing.publishedAt,
+              expiresAt: isRenewal ? renewalExpiresAt : listing.expiresAt
+            }
+          });
+
+          const refreshedListing = await tx.listing.findUnique({
+            where: { id: listing.id },
+            include: LISTING_PAYMENT_INCLUDE
+          });
+
+          return { payment, subscription, listing: refreshedListing };
+        });
+
+        return {
+          statusCode: 200,
+          message: isRenewal
+            ? 'Free activation applied and the listing has been renewed'
+            : 'Free activation applied and the listing is now ready for admin review',
+          data: {
+            listing: serializeListingMedia(baseUrl, result.listing),
+            payment: result.payment,
+            subscription: result.subscription,
+            selectedPlan: plan,
+            isUnderFirstThreeMonths,
+            checkoutSessionId: null,
+            paymentStatus: 'SUCCESS',
+            noPaymentRequired: true
+          }
+        };
       }
 
       const publishableKey = getStripePublishableKey();

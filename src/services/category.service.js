@@ -3,20 +3,7 @@ import { createHttpError } from '../utils/httpError.js';
 
 const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
 
-const toPublicUploadPath = (filePath) => `/${filePath.split('uploads')[1].replace(/\\/g, '/').replace(/^\//, 'uploads/')}`;
-
-const toAbsoluteMediaUrl = (baseUrl, mediaPath) => {
-  if (!mediaPath) {
-    return mediaPath;
-  }
-
-  if (ABSOLUTE_URL_PATTERN.test(mediaPath)) {
-    return mediaPath;
-  }
-
-  const normalizedPath = mediaPath.startsWith('/') ? mediaPath : `/${mediaPath}`;
-  return `${baseUrl}${normalizedPath}`;
-};
+import { getUploadedFileUrl, toAbsoluteMediaUrl } from '../utils/media.js';
 
 const serializeCategoryImage = (baseUrl, category) => {
   if (!category) {
@@ -47,7 +34,7 @@ class CategoryService {
   async createEventCategory({ body, file, baseUrl }) {
     return this.createCategory({
       name: body?.name,
-      image: file ? toPublicUploadPath(file.path) : undefined,
+      image: file ? getUploadedFileUrl(file) : undefined,
       type: 'EVENT',
       baseUrl
     });
@@ -56,7 +43,7 @@ class CategoryService {
   async createServiceCategory({ body, file, baseUrl }) {
     return this.createCategory({
       name: body?.name,
-      image: file ? toPublicUploadPath(file.path) : undefined,
+      image: file ? getUploadedFileUrl(file) : undefined,
       type: 'SERVICE',
       baseUrl
     });
@@ -462,7 +449,7 @@ class CategoryService {
     }
 
     const { name } = body || {};
-    const image = file ? toPublicUploadPath(file.path) : undefined;
+    const image = file ? getUploadedFileUrl(file) : undefined;
 
     const existingCategory = await prisma.category.findFirst({
       where: {
