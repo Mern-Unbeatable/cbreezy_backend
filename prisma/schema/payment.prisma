@@ -1,6 +1,6 @@
 model Payment {
   id               String        @id @default(cuid())
-  stripeSessionId  String        @unique 
+  paypalOrderId    String        @unique 
   amount           Float         // $0.99 or $2.99
   status           PaymentStatus @default(PENDING)
   

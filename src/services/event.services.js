@@ -1517,7 +1517,8 @@
 
 
 import prisma from '../config/prisma.js';
-import { STRIPE_CURRENCY, getStripeClient, getStripePublishableKey } from '../config/stripe.js';
+import { PAYPAL_CURRENCY, getPayPalClient, getPayPalClientId } from '../config/paypal.js';
+import checkoutNodeJssdk from '@paypal/checkout-server-sdk';
 import { createHttpError } from '../utils/httpError.js';
 import { getUploadedFileUrl, toAbsoluteMediaUrl } from '../utils/media.js';
 
@@ -3007,7 +3008,7 @@ class EventService {
           const generatedSessionId = `free-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
           const payment = await tx.payment.create({
             data: {
-              stripeSessionId: generatedSessionId,
+              paypalOrderId: generatedSessionId,
               amount: plan.price,
               status: 'SUCCESS',
               listingId: listing.id,
@@ -3074,52 +3075,48 @@ class EventService {
         };
       }
 
-      const publishableKey = getStripePublishableKey();
-      if (!publishableKey) {
-        throw createHttpError(500, 'STRIPE_PUBLISHABLE_KEY is not configured');
+      const paypalClientId = getPayPalClientId();
+      if (!paypalClientId) {
+        throw createHttpError(500, 'PAYPAL_CLIENT_ID is not configured');
       }
 
-      const stripe = getStripeClient();
-      const checkoutSession = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        success_url: normalizedSuccessUrl,
-        cancel_url: normalizedCancelUrl,
-        customer_email: listing.user?.email || undefined,
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency: STRIPE_CURRENCY,
-              unit_amount: Math.round(plan.price * 100),
-              product_data: {
-                name: plan.title,
-                description: `${plan.title} for ${listing.title}`
-              }
-            }
-          }
-        ],
-        metadata: {
-          listingId: listing.id,
-          planId: plan.id,
-          userId,
-          listingType: 'EVENT'
+      const client = getPayPalClient();
+      const request = new checkoutNodeJssdk.orders.OrdersCreateRequest();
+      request.prefer("return=representation");
+      request.requestBody({
+        intent: 'CAPTURE',
+        purchase_units: [{
+          amount: {
+            currency_code: PAYPAL_CURRENCY,
+            value: plan.price.toString()
+          },
+          description: `${plan.title} for ${listing.title}`,
+          custom_id: `${listing.id}|${plan.id}|${userId}`
+        }],
+        application_context: {
+          return_url: normalizedSuccessUrl,
+          cancel_url: normalizedCancelUrl
         }
       });
 
+      const response = await client.execute(request);
+      const order = response.result;
+      const checkoutUrl = order.links.find(link => link.rel === 'approve').href;
+
       return {
         statusCode: 200,
-        message: 'Stripe checkout session created successfully',
+        message: 'PayPal checkout session created successfully',
         data: {
           listing: serializeEventMedia(baseUrl, listing),
           selectedPlan: plan,
           isUnderFirstThreeMonths,
           isEligibleForFree,
           isEligibleForDiscount,
-          checkoutSessionId: checkoutSession.id,
-          checkoutUrl: checkoutSession.url,
-          publishableKey,
+          checkoutSessionId: order.id,
+          checkoutUrl: checkoutUrl,
+          paypalClientId: paypalClientId,
           amount: plan.price,
-          currency: STRIPE_CURRENCY
+          currency: PAYPAL_CURRENCY
         }
       };
     } catch (error) {
@@ -3209,15 +3206,29 @@ class EventService {
 
       const isUnderFirstThreeMonths = isEligibleForDiscount || isEligibleForFree; 
 
-      const stripe = getStripeClient();
-      const checkoutSession = await stripe.checkout.sessions.retrieve(checkoutSessionId);
+      const client = getPayPalClient();
+      const request = new checkoutNodeJssdk.orders.OrdersCaptureRequest(checkoutSessionId);
+      request.requestBody({});
 
-      if (checkoutSession.metadata?.listingId !== listing.id || checkoutSession.metadata?.planId !== plan.id || checkoutSession.metadata?.userId !== userId) {
-        throw createHttpError(400, 'Checkout session does not match this event listing purchase request');
+      let order;
+      try {
+        const response = await client.execute(request);
+        order = response.result;
+      } catch (err) {
+        throw createHttpError(400, 'Failed to capture PayPal order');
       }
 
-      if (checkoutSession.payment_status !== 'paid') {
-        throw createHttpError(400, 'Stripe checkout payment is not completed yet');
+      if (order.status !== 'COMPLETED') {
+        throw createHttpError(400, 'PayPal checkout payment is not completed yet');
+      }
+
+      const customId = order.purchase_units?.[0]?.custom_id || "";
+      if (customId) {
+        const [listingIdMeta, planIdMeta, userIdMeta] = customId.split('|');
+
+        if (listingIdMeta !== listing.id || planIdMeta !== plan.id || userIdMeta !== userId) {
+          throw createHttpError(400, 'Checkout session does not match this event listing purchase request');
+        }
       }
 
       const isRenewal = listing.status === 'EXPIRED' || (listing.expiresAt && listing.expiresAt <= new Date());
@@ -3227,7 +3238,7 @@ class EventService {
       const result = await prisma.$transaction(async (tx) => {
         const existingPayment = await tx.payment.findUnique({
           where: {
-            stripeSessionId: checkoutSession.id
+            paypalOrderId: order.id
           }
         });
 
@@ -3238,17 +3249,19 @@ class EventService {
           }
         });
 
-        if (!isRenewal && successfulPaymentForListing && successfulPaymentForListing.stripeSessionId !== checkoutSession.id) {
+        if (!isRenewal && successfulPaymentForListing && successfulPaymentForListing.paypalOrderId !== order.id) {
           throw createHttpError(409, 'This event listing has already been paid for');
         }
+
+        const amountPaid = parseFloat(order.purchase_units[0].payments.captures[0].amount.value);
 
         const payment = existingPayment
           ? await tx.payment.update({
               where: {
-                stripeSessionId: checkoutSession.id
+                paypalOrderId: order.id
               },
               data: {
-                amount: checkoutSession.amount_total > 0 ? checkoutSession.amount_total / 100 : plan.price,
+                amount: amountPaid > 0 ? amountPaid : plan.price,
                 status: 'SUCCESS',
                 listingId: listing.id,
                 userId
@@ -3256,8 +3269,8 @@ class EventService {
             })
           : await tx.payment.create({
               data: {
-                stripeSessionId: checkoutSession.id,
-                amount: checkoutSession.amount_total > 0 ? checkoutSession.amount_total / 100 : plan.price,
+                paypalOrderId: order.id,
+                amount: amountPaid > 0 ? amountPaid : plan.price,
                 status: 'SUCCESS',
                 listingId: listing.id,
                 userId
@@ -3315,8 +3328,8 @@ class EventService {
       return {
         statusCode: 200,
         message: isRenewal
-          ? 'Stripe checkout payment verified successfully and the event has been renewed'
-          : 'Stripe checkout payment verified successfully and the event is now ready for admin review',
+          ? 'PayPal checkout payment verified successfully and the event has been renewed'
+          : 'PayPal checkout payment verified successfully and the event is now ready for admin review',
         data: {
           listing: serializeEventMedia(baseUrl, result.listing),
           payment: result.payment,
@@ -3325,8 +3338,8 @@ class EventService {
           isUnderFirstThreeMonths,
           isEligibleForFree,
           isEligibleForDiscount,
-          checkoutSessionId: checkoutSession.id,
-          paymentStatus: checkoutSession.payment_status
+          checkoutSessionId: order.id,
+          paymentStatus: order.status
         }
       };
     } catch (error) {

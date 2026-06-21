@@ -114,9 +114,9 @@ class PricingController {
     }
   }
 
-  async getStripeConfig(req, res, next) {
+  async getPayPalConfig(req, res, next) {
     try {
-      const result = await pricingService.getStripeConfig();
+      const result = await pricingService.getPayPalConfig();
       return sendResponse(res, result);
     } catch (error) {
       next(error);

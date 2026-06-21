@@ -28,7 +28,7 @@ router.get('/settings', authenticate, authorize('ADMIN'), pricingController.getS
 router.put('/settings', authenticate, authorize('ADMIN'), pricingController.updateSystemSettings.bind(pricingController));
 
 router.get('/', pricingController.getActivePricingPlans.bind(pricingController));
-router.get('/stripe-config', pricingController.getStripeConfig.bind(pricingController));
+router.get('/paypal-config', pricingController.getPayPalConfig.bind(pricingController));
 router.get('/eligibility', authenticate, pricingController.getPricingEligibility.bind(pricingController));
 router.post('/', authenticate, authorize('ADMIN'), pricingController.createPricingPlan.bind(pricingController));
 router.put('/:id', authenticate, authorize('ADMIN'), pricingController.updatePricingPlan.bind(pricingController));
