@@ -2795,7 +2795,7 @@ class EventService {
 
           const refreshedListing = await tx.listing.findUnique({
             where: { id: listing.id },
-            include: LISTING_PAYMENT_INCLUDE
+            include: EVENT_PAYMENT_INCLUDE
           });
 
           return { payment, subscription, listing: refreshedListing };
