@@ -763,13 +763,27 @@ import emailService from '../utils/emailService.js';
 import { createHttpError } from '../utils/httpError.js';
 import { getUploadedFileUrl, toAbsoluteMediaUrl } from '../utils/media.js';
 
+const mapFirebaseSignInProvider = (signInProvider) => {
+  if (signInProvider === 'google.com') {
+    return 'GOOGLE';
+  }
+
+  return 'EMAIL';
+};
+
 const serializeUserProfile = (baseUrl, user) => {
   if (!user) {
     return user;
   }
 
+  const authProvider = user.authProvider || 'EMAIL';
+  const isGoogleLogin = authProvider === 'GOOGLE';
+
   return {
     ...user,
+    authProvider,
+    isGoogleLogin,
+    canChangePassword: !isGoogleLogin,
     profileImage: toAbsoluteMediaUrl(baseUrl, user.profileImage),
     countryName: user.country?.name || null,
     regionName: user.region?.name || null,
@@ -800,11 +814,12 @@ class AuthService {
     return {
       email,
       fullName: decodedToken.name?.trim() || fallbackName,
-      profileImage: decodedToken.picture || null
+      profileImage: decodedToken.picture || null,
+      authProvider: mapFirebaseSignInProvider(decodedToken.firebase?.sign_in_provider)
     };
   }
 
-  async createFirebaseUser({ email, fullName, profileImage }) {
+  async createFirebaseUser({ email, fullName, profileImage, authProvider = 'EMAIL' }) {
     const randomPassword = crypto.randomBytes(32).toString('hex');
     const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
@@ -815,6 +830,7 @@ class AuthService {
         password: hashedPassword,
         profileImage,
         role: 'USER',
+        authProvider,
         isEmailVerified: true
       }
     });
@@ -849,6 +865,7 @@ class AuthService {
         email: true,
         phoneNumber: true,
         role: true,
+        authProvider: true,
         profileImage: true,
         isEmailVerified: true,
         createdAt: true,
@@ -960,6 +977,7 @@ class AuthService {
           regionId,
           cityId,
           role: 'USER',
+          authProvider: 'EMAIL',
           isEmailVerified: false
         },
         select: {
@@ -968,6 +986,7 @@ class AuthService {
           email: true,
           phoneNumber: true,
           role: true,
+          authProvider: true,
           profileImage: true,
           isEmailVerified: true,
           createdAt: true,
@@ -1065,7 +1084,7 @@ class AuthService {
    * @returns {Promise<Object>} - User with backend JWT token
    */
   async firebaseRegister(idToken) {
-    const { email, fullName, profileImage } = await this.getVerifiedFirebaseUser(idToken);
+    const { email, fullName, profileImage, authProvider } = await this.getVerifiedFirebaseUser(idToken);
 
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -1081,13 +1100,13 @@ class AuthService {
     // Ensure the default FREE pricing plan exists before creating a Firebase user
     await this.ensureDefaultFreePlanExists();
 
-    const user = await this.createFirebaseUser({ email, fullName, profileImage });
+    const user = await this.createFirebaseUser({ email, fullName, profileImage, authProvider });
 
     return this.buildAuthResponse(user, 'Firebase registration successful');
   }
 
   async firebaseLogin(idToken) {
-    const { email } = await this.getVerifiedFirebaseUser(idToken);
+    const { email, authProvider } = await this.getVerifiedFirebaseUser(idToken);
 
     const user = await prisma.user.findFirst({
       where: {
@@ -1098,6 +1117,13 @@ class AuthService {
 
     if (!user) {
       throw new Error('No account found for this email. Please register first.');
+    }
+
+    if (user.authProvider !== authProvider) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { authProvider }
+      });
     }
 
     return this.buildAuthResponse(user, 'Firebase login successful');
@@ -1328,6 +1354,10 @@ class AuthService {
       throw new Error('User not found');
     }
 
+    if (user.authProvider === 'GOOGLE') {
+      throw new Error('Password change is not available for Google sign-in accounts');
+    }
+
     // Verify current password
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
 
@@ -1373,6 +1403,7 @@ class AuthService {
         phoneNumber: true,
         profileImage: true,
         role: true,
+        authProvider: true,
         createdAt: true,
         updatedAt: true,
         countryId: true,
@@ -1486,6 +1517,7 @@ class AuthService {
         phoneNumber: true,
         profileImage: true,
         role: true,
+        authProvider: true,
         createdAt: true,
         updatedAt: true,
         countryId: true,

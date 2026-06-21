@@ -11,8 +11,9 @@ model User {
   region          Region?   @relation(fields: [regionId], references: [id])
   cityId          String?
   city            City?     @relation(fields: [cityId], references: [id])
-  role            Role      @default(USER) 
-  isEmailVerified Boolean   @default(false)
+  role            Role          @default(USER)
+  authProvider    AuthProvider  @default(EMAIL)
+  isEmailVerified Boolean       @default(false)
   
   // Relations
   listings      Listing[]
@@ -28,4 +29,9 @@ model User {
 enum Role {
   USER
   ADMIN
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
 }
