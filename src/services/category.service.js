@@ -1,4 +1,5 @@
 import prisma from '../config/prisma.js';
+import listingService from './services.service.js';
 import { createHttpError } from '../utils/httpError.js';
 
 const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
@@ -170,7 +171,7 @@ class CategoryService {
     };
   }
 
-  async getCategoryByIdAndType(id, type, { baseUrl, sortOrder = 'desc' } = {}) {
+  async getCategoryByIdAndType(id, type, { baseUrl, sortOrder = 'desc', sortBy = 'createdAt' } = {}) {
     if (!['SERVICE', 'EVENT'].includes(type)) {
       throw createHttpError(400, 'Invalid category type. Must be SERVICE or EVENT');
     }
@@ -194,10 +195,30 @@ class CategoryService {
       throw createHttpError(404, `${type === 'SERVICE' ? 'Service' : 'Event'} category not found`);
     }
 
+    const serializedCategory = serializeCategoryWithSubcategories(baseUrl, category);
+
+    if (type === 'SERVICE') {
+      const services = await listingService.getServicesByCategoryId({
+        categoryId: id,
+        baseUrl,
+        sortBy,
+        sortOrder: validSortOrder
+      });
+
+      return {
+        statusCode: 200,
+        message: `${type} category retrieved successfully`,
+        data: {
+          ...serializedCategory,
+          services
+        }
+      };
+    }
+
     return {
       statusCode: 200,
       message: `${type} category retrieved successfully`,
-      data: serializeCategoryWithSubcategories(baseUrl, category)
+      data: serializedCategory
     };
   }
 

@@ -74,6 +74,58 @@ const normalizeStringArray = (value) => {
   return [];
 };
 
+const normalizeImageReference = (imageUrl) => {
+  if (!imageUrl) {
+    return '';
+  }
+
+  const value = String(imageUrl).trim();
+
+  try {
+    if (/^https?:\/\//i.test(value)) {
+      return decodeURIComponent(new URL(value).pathname);
+    }
+  } catch {
+    // fall through for non-URL values
+  }
+
+  return value.startsWith('/') ? value : `/${value}`;
+};
+
+const imagesMatch = (storedImage, targetImage) => {
+  if (!storedImage || !targetImage) {
+    return false;
+  }
+
+  if (storedImage === targetImage) {
+    return true;
+  }
+
+  const normalizedStored = normalizeImageReference(storedImage);
+  const normalizedTarget = normalizeImageReference(targetImage);
+
+  if (normalizedStored === normalizedTarget) {
+    return true;
+  }
+
+  return normalizedStored.endsWith(normalizedTarget) || normalizedTarget.endsWith(normalizedStored);
+};
+
+const removeMatchingImages = (images, targets) => {
+  const list = Array.isArray(images) ? images : [];
+  const removals = normalizeStringArray(targets);
+
+  if (!removals.length) {
+    return list;
+  }
+
+  return list.filter((image) => !removals.some((target) => imagesMatch(image, target)));
+};
+
+const dedupeImages = (images) => images.filter((image, index, arr) =>
+  arr.findIndex((item) => imagesMatch(item, image)) === index
+);
+
 const getIntroductoryCutoffDate = () => {
   const date = new Date();
   date.setDate(date.getDate() - INTRODUCTORY_PERIOD_DAYS);
@@ -587,6 +639,42 @@ class ListingService {
     }
   }
 
+  async getServicesByCategoryId({ categoryId, baseUrl, sortBy = 'createdAt', sortOrder = 'desc' }) {
+    await expireServiceListings();
+
+    const selectedSortField = SORTABLE_FIELDS.includes(sortBy) ? sortBy : 'createdAt';
+    const selectedSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+
+    const services = await prisma.listing.findMany({
+      where: {
+        categoryId,
+        listingType: 'SERVICE',
+        deletedAt: null
+      },
+      include: {
+        category: true,
+        subCategory: true,
+        country: true,
+        region: true,
+        city: true,
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phoneNumber: true,
+            profileImage: true
+          }
+        }
+      },
+      orderBy: {
+        [selectedSortField]: selectedSortOrder
+      }
+    });
+
+    return services.map((service) => serializeListingMedia(baseUrl, service));
+  }
+
   async getServiceById({ id, baseUrl }) {
     try {
       await expireServiceListings();
@@ -744,16 +832,57 @@ class ListingService {
       if (body.categoryId) updateData.categoryId = body.categoryId;
       if (body.subCategoryId) updateData.subCategoryId = body.subCategoryId;
 
-      if (files) {
-        if (files.mainImage && files.mainImage[0]) {
-          updateData.mainImage = getUploadedFileUrl(files.mainImage[0]);
-        }
-        if (files.serviceImages) {
-          updateData.serviceImages = files.serviceImages.map((file) => getUploadedFileUrl(file));
-        }
-        if (files.gallery) {
-          updateData.gallery = files.gallery.map((file) => getUploadedFileUrl(file));
-        }
+      const hasServiceImageChanges = (
+        body.serviceImages !== undefined ||
+        body.removedServiceImages !== undefined ||
+        body.removeServiceImages !== undefined ||
+        body.gallery !== undefined ||
+        body.removedGallery !== undefined ||
+        body.removeGallery !== undefined ||
+        files?.serviceImages ||
+        files?.serviceImage ||
+        files?.mainImage ||
+        files?.gallery ||
+        files?.serviceGallery
+      );
+
+      if (hasServiceImageChanges) {
+        let nextServiceImages = body.serviceImages !== undefined
+          ? normalizeStringArray(body.serviceImages)
+          : [...(existingService.serviceImages || [])];
+
+        nextServiceImages = removeMatchingImages(
+          nextServiceImages,
+          body.removedServiceImages || body.removeServiceImages
+        );
+
+        const uploadedServiceImages = [
+          ...(files?.serviceImages || []),
+          ...(files?.serviceImage || []),
+          ...(files?.mainImage || [])
+        ].map((file) => getUploadedFileUrl(file)).filter(Boolean);
+
+        nextServiceImages = dedupeImages([...nextServiceImages, ...uploadedServiceImages]);
+
+        let nextGallery = body.gallery !== undefined
+          ? normalizeStringArray(body.gallery)
+          : [...(existingService.gallery || [])];
+
+        nextGallery = removeMatchingImages(
+          nextGallery,
+          body.removedGallery || body.removeGallery
+        );
+
+        const uploadedGallery = [
+          ...(files?.serviceGallery || []),
+          ...(files?.gallery || [])
+        ].map((file) => getUploadedFileUrl(file)).filter(Boolean);
+
+        nextGallery = dedupeImages([...nextGallery, ...uploadedGallery]);
+
+        updateData.serviceImages = nextServiceImages;
+        updateData.gallery = nextGallery;
+        updateData.mainImage = nextServiceImages[0] || existingService.mainImage || null;
       }
 
       const service = await prisma.listing.update({
@@ -777,6 +906,106 @@ class ListingService {
       return {
         statusCode: 200,
         message: 'Service updated successfully',
+        data: serializeListingMedia(baseUrl, service)
+      };
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  }
+
+  async removeServiceImage({ id, userId, imageUrl, imageType, baseUrl }) {
+    try {
+      await expireServiceListings();
+
+      if (!imageUrl || !String(imageUrl).trim()) {
+        throw createHttpError(400, 'imageUrl is required');
+      }
+
+      const existingService = await prisma.listing.findFirst({
+        where: {
+          id,
+          userId,
+          listingType: 'SERVICE',
+          deletedAt: null
+        }
+      });
+
+      if (!existingService) {
+        throw createHttpError(404, 'Service not found or you do not have permission to edit it');
+      }
+
+      const trimmedImageUrl = String(imageUrl).trim();
+      const normalizedType = imageType?.trim();
+      const updateData = {};
+      let nextServiceImages = [...(existingService.serviceImages || [])];
+      let nextGallery = [...(existingService.gallery || [])];
+      let removed = false;
+
+      const tryRemoveFromServiceImages = () => {
+        const updatedImages = removeMatchingImages(nextServiceImages, [trimmedImageUrl]);
+
+        if (updatedImages.length === nextServiceImages.length) {
+          return false;
+        }
+
+        nextServiceImages = updatedImages;
+        removed = true;
+
+        if (imagesMatch(existingService.mainImage, trimmedImageUrl)) {
+          updateData.mainImage = updatedImages[0] || null;
+        }
+
+        return true;
+      };
+
+      const tryRemoveFromGallery = () => {
+        const updatedGallery = removeMatchingImages(nextGallery, [trimmedImageUrl]);
+
+        if (updatedGallery.length === nextGallery.length) {
+          return false;
+        }
+
+        nextGallery = updatedGallery;
+        removed = true;
+        return true;
+      };
+
+      if (normalizedType === 'serviceImages') {
+        if (!tryRemoveFromServiceImages()) {
+          throw createHttpError(404, 'Image not found in service images');
+        }
+      } else if (normalizedType === 'gallery') {
+        if (!tryRemoveFromGallery()) {
+          throw createHttpError(404, 'Image not found in gallery');
+        }
+      } else {
+        if (!tryRemoveFromServiceImages()) {
+          tryRemoveFromGallery();
+        }
+      }
+
+      if (!removed) {
+        throw createHttpError(404, 'Image not found on this service');
+      }
+
+      updateData.serviceImages = nextServiceImages;
+      updateData.gallery = nextGallery;
+
+      const service = await prisma.listing.update({
+        where: { id },
+        data: updateData,
+        include: {
+          category: true,
+          subCategory: true,
+          country: true,
+          region: true,
+          city: true
+        }
+      });
+
+      return {
+        statusCode: 200,
+        message: 'Service image removed successfully',
         data: serializeListingMedia(baseUrl, service)
       };
     } catch (error) {

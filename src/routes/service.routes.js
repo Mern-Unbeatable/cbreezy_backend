@@ -9,6 +9,7 @@ router.get('/admin', authenticate, authorize('ADMIN'), listingController.getAdmi
 router.get('/me', authenticate, listingController.getMyServices.bind(listingController));
 router.get('/', listingController.getPublicServices.bind(listingController));
 router.post('/', authenticate, serviceListingUpload, listingController.createService.bind(listingController));
+router.delete('/me/:id/images', authenticate, listingController.removeServiceImage.bind(listingController));
 router.put('/me/:id', authenticate, serviceListingUpload, listingController.updateService.bind(listingController));
 router.delete('/me/:id', authenticate, listingController.deleteMyService.bind(listingController));
 router.post('/:id/purchase', authenticate, listingController.createServicePaymentIntent.bind(listingController));

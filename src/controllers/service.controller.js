@@ -82,6 +82,21 @@ class ListingController {
     }
   }
 
+  async removeServiceImage(req, res, next) {
+    try {
+      const result = await listingService.removeServiceImage({
+        id: req.params.id,
+        userId: req.user.userId,
+        imageUrl: req.body.imageUrl,
+        imageType: req.body.imageType,
+        baseUrl: getBaseUrl(req)
+      });
+      return sendResponse(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async deleteMyService(req, res, next) {
     try {
       const result = await listingService.deleteMyService({

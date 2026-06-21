@@ -104,9 +104,11 @@ class CategoryController {
 
   async getServiceCategoryById(req, res, next) {
     try {
+      const sortBy = req.query.sortBy || 'createdAt';
       const result = await categoryService.getCategoryByIdAndType(req.params.id, 'SERVICE', {
         baseUrl: getBaseUrl(req),
-        sortOrder: getSortOrder(req)
+        sortOrder: getSortOrder(req),
+        sortBy
       });
       return sendResponse(res, result);
     } catch (error) {
