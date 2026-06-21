@@ -118,9 +118,11 @@ class CategoryController {
 
   async getEventCategoryById(req, res, next) {
     try {
+      const sortBy = req.query.sortBy || 'createdAt';
       const result = await categoryService.getCategoryByIdAndType(req.params.id, 'EVENT', {
         baseUrl: getBaseUrl(req),
-        sortOrder: getSortOrder(req)
+        sortOrder: getSortOrder(req),
+        sortBy
       });
       return sendResponse(res, result);
     } catch (error) {

@@ -1601,6 +1601,75 @@ const normalizeStringArray = (value) => {
   return [];
 };
 
+const normalizeImageReference = (imageUrl) => {
+  if (!imageUrl) {
+    return '';
+  }
+
+  const value = String(imageUrl).trim();
+
+  try {
+    if (/^https?:\/\//i.test(value)) {
+      return decodeURIComponent(new URL(value).pathname);
+    }
+  } catch {
+    // fall through for non-URL values
+  }
+
+  return value.startsWith('/') ? value : `/${value}`;
+};
+
+const imagesMatch = (storedImage, targetImage) => {
+  if (!storedImage || !targetImage) {
+    return false;
+  }
+
+  if (storedImage === targetImage) {
+    return true;
+  }
+
+  const normalizedStored = normalizeImageReference(storedImage);
+  const normalizedTarget = normalizeImageReference(targetImage);
+
+  if (normalizedStored === normalizedTarget) {
+    return true;
+  }
+
+  return normalizedStored.endsWith(normalizedTarget) || normalizedTarget.endsWith(normalizedStored);
+};
+
+const removeMatchingImages = (images, targets) => {
+  const list = Array.isArray(images) ? images : [];
+  const removals = normalizeStringArray(targets);
+
+  if (!removals.length) {
+    return list;
+  }
+
+  return list.filter((image) => !removals.some((target) => imagesMatch(image, target)));
+};
+
+const dedupeImages = (images) => images.filter((image, index, arr) =>
+  arr.findIndex((item) => imagesMatch(item, image)) === index
+);
+
+const EVENT_LISTING_PUBLIC_INCLUDE = {
+  category: true,
+  subCategory: true,
+  country: true,
+  region: true,
+  city: true,
+  user: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      phoneNumber: true,
+      profileImage: true
+    }
+  }
+};
+
 const getListingExpiryDate = (startDate = new Date()) => {
   const expiryDate = new Date(startDate);
   expiryDate.setDate(expiryDate.getDate() + LISTING_ACTIVE_DAYS);
@@ -2138,6 +2207,27 @@ class EventService {
     }
   }
 
+  async getEventsByCategoryId({ categoryId, baseUrl, sortBy = 'createdAt', sortOrder = 'desc' }) {
+    await expireEventListings();
+
+    const selectedSortField = SORTABLE_FIELDS.includes(sortBy) ? sortBy : 'createdAt';
+    const selectedSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+
+    const events = await prisma.listing.findMany({
+      where: {
+        categoryId,
+        listingType: 'EVENT',
+        deletedAt: null
+      },
+      include: EVENT_LISTING_PUBLIC_INCLUDE,
+      orderBy: {
+        [selectedSortField]: selectedSortOrder
+      }
+    });
+
+    return events.map((event) => serializeEventMedia(baseUrl, event));
+  }
+
   async getEventById({ id, baseUrl }) {
     try {
       await expireEventListings();
@@ -2296,16 +2386,79 @@ class EventService {
       if (body.startDate) updateData.startDate = new Date(body.startDate);
       if (body.endDate) updateData.endDate = new Date(body.endDate);
 
-      if (files) {
-        if (files.mainImage && files.mainImage[0]) {
-          updateData.mainImage = getUploadedFileUrl(files.mainImage[0]);
-        }
-        if (files.serviceImages) {
-          updateData.serviceImages = files.serviceImages.map((file) => getUploadedFileUrl(file));
-        }
-        if (files.gallery) {
-          updateData.gallery = files.gallery.map((file) => getUploadedFileUrl(file));
-        }
+      const hasEventImageChanges = (
+        body.eventImages !== undefined ||
+        body.serviceImages !== undefined ||
+        body.removedEventImages !== undefined ||
+        body.removedServiceImages !== undefined ||
+        body.removeEventImages !== undefined ||
+        body.removeServiceImages !== undefined ||
+        body.eventGallery !== undefined ||
+        body.gallery !== undefined ||
+        body.removedEventGallery !== undefined ||
+        body.removedGallery !== undefined ||
+        body.removeEventGallery !== undefined ||
+        body.removeGallery !== undefined ||
+        files?.eventImages ||
+        files?.eventImage ||
+        files?.serviceImages ||
+        files?.mainImage ||
+        files?.eventGallery ||
+        files?.gallery
+      );
+
+      if (hasEventImageChanges) {
+        const explicitEventImages = body.eventImages !== undefined
+          ? body.eventImages
+          : body.serviceImages;
+
+        let nextEventImages = explicitEventImages !== undefined
+          ? normalizeStringArray(explicitEventImages)
+          : [...(existingEvent.serviceImages || [])];
+
+        nextEventImages = removeMatchingImages(
+          nextEventImages,
+          body.removedEventImages
+            || body.removedServiceImages
+            || body.removeEventImages
+            || body.removeServiceImages
+        );
+
+        const uploadedEventImages = [
+          ...(files?.eventImages || []),
+          ...(files?.eventImage || []),
+          ...(files?.serviceImages || []),
+          ...(files?.mainImage || [])
+        ].map((file) => getUploadedFileUrl(file)).filter(Boolean);
+
+        nextEventImages = dedupeImages([...nextEventImages, ...uploadedEventImages]);
+
+        const explicitGallery = body.eventGallery !== undefined
+          ? body.eventGallery
+          : body.gallery;
+
+        let nextGallery = explicitGallery !== undefined
+          ? normalizeStringArray(explicitGallery)
+          : [...(existingEvent.gallery || [])];
+
+        nextGallery = removeMatchingImages(
+          nextGallery,
+          body.removedEventGallery
+            || body.removedGallery
+            || body.removeEventGallery
+            || body.removeGallery
+        );
+
+        const uploadedGallery = [
+          ...(files?.eventGallery || []),
+          ...(files?.gallery || [])
+        ].map((file) => getUploadedFileUrl(file)).filter(Boolean);
+
+        nextGallery = dedupeImages([...nextGallery, ...uploadedGallery]);
+
+        updateData.serviceImages = nextEventImages;
+        updateData.gallery = nextGallery;
+        updateData.mainImage = nextEventImages[0] || existingEvent.mainImage || null;
       }
 
       const event = await prisma.listing.update({
@@ -2329,6 +2482,106 @@ class EventService {
       return {
         statusCode: 200,
         message: 'Event updated successfully',
+        data: serializeEventMedia(baseUrl, event)
+      };
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  }
+
+  async removeEventImage({ id, userId, imageUrl, imageType, baseUrl }) {
+    try {
+      await expireEventListings();
+
+      if (!imageUrl || !String(imageUrl).trim()) {
+        throw createHttpError(400, 'imageUrl is required');
+      }
+
+      const existingEvent = await prisma.listing.findFirst({
+        where: {
+          id,
+          userId,
+          listingType: 'EVENT',
+          deletedAt: null
+        }
+      });
+
+      if (!existingEvent) {
+        throw createHttpError(404, 'Event not found or you do not have permission to edit it');
+      }
+
+      const trimmedImageUrl = String(imageUrl).trim();
+      const normalizedType = imageType?.trim();
+      const updateData = {};
+      let nextEventImages = [...(existingEvent.serviceImages || [])];
+      let nextGallery = [...(existingEvent.gallery || [])];
+      let removed = false;
+
+      const tryRemoveFromEventImages = () => {
+        const updatedImages = removeMatchingImages(nextEventImages, [trimmedImageUrl]);
+
+        if (updatedImages.length === nextEventImages.length) {
+          return false;
+        }
+
+        nextEventImages = updatedImages;
+        removed = true;
+
+        if (imagesMatch(existingEvent.mainImage, trimmedImageUrl)) {
+          updateData.mainImage = updatedImages[0] || null;
+        }
+
+        return true;
+      };
+
+      const tryRemoveFromGallery = () => {
+        const updatedGallery = removeMatchingImages(nextGallery, [trimmedImageUrl]);
+
+        if (updatedGallery.length === nextGallery.length) {
+          return false;
+        }
+
+        nextGallery = updatedGallery;
+        removed = true;
+        return true;
+      };
+
+      if (normalizedType === 'eventImages' || normalizedType === 'serviceImages') {
+        if (!tryRemoveFromEventImages()) {
+          throw createHttpError(404, 'Image not found in event images');
+        }
+      } else if (normalizedType === 'gallery' || normalizedType === 'eventGallery') {
+        if (!tryRemoveFromGallery()) {
+          throw createHttpError(404, 'Image not found in gallery');
+        }
+      } else {
+        if (!tryRemoveFromEventImages()) {
+          tryRemoveFromGallery();
+        }
+      }
+
+      if (!removed) {
+        throw createHttpError(404, 'Image not found on this event');
+      }
+
+      updateData.serviceImages = nextEventImages;
+      updateData.gallery = nextGallery;
+
+      const event = await prisma.listing.update({
+        where: { id },
+        data: updateData,
+        include: {
+          category: true,
+          subCategory: true,
+          country: true,
+          region: true,
+          city: true
+        }
+      });
+
+      return {
+        statusCode: 200,
+        message: 'Event image removed successfully',
         data: serializeEventMedia(baseUrl, event)
       };
     } catch (error) {

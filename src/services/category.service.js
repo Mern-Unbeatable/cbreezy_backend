@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import listingService from './services.service.js';
+import eventService from './event.services.js';
 import { createHttpError } from '../utils/httpError.js';
 
 const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
@@ -215,10 +216,20 @@ class CategoryService {
       };
     }
 
+    const events = await eventService.getEventsByCategoryId({
+      categoryId: id,
+      baseUrl,
+      sortBy,
+      sortOrder: validSortOrder
+    });
+
     return {
       statusCode: 200,
       message: `${type} category retrieved successfully`,
-      data: serializedCategory
+      data: {
+        ...serializedCategory,
+        events
+      }
     };
   }
 

@@ -82,6 +82,21 @@ class EventController {
     }
   }
 
+  async removeEventImage(req, res, next) {
+    try {
+      const result = await eventService.removeEventImage({
+        id: req.params.id,
+        userId: req.user.userId,
+        imageUrl: req.body.imageUrl,
+        imageType: req.body.imageType,
+        baseUrl: getBaseUrl(req)
+      });
+      return sendResponse(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async deleteMyEvent(req, res, next) {
     try {
       const result = await eventService.deleteMyEvent({

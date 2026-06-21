@@ -21,6 +21,7 @@ router.post('/service', authenticate, authorize('ADMIN'), categoryImageUpload, c
 
 // Dedicated event category endpoints
 router.get('/event', categoryController.getEventCategoriesSummary.bind(categoryController));
+router.get('/event/:id', categoryController.getEventCategoryById.bind(categoryController));
 router.post('/event', authenticate, authorize('ADMIN'), categoryImageUpload, categoryController.createEventCategory.bind(categoryController));
 
 export default router;

@@ -9,6 +9,7 @@ router.get('/admin', authenticate, authorize('ADMIN'), eventController.getAdminE
 router.get('/me', authenticate, eventController.getMyEvents.bind(eventController));
 router.get('/', eventController.getPublicEvents.bind(eventController));
 router.post('/', authenticate, eventListingUpload, eventController.createEvent.bind(eventController));
+router.delete('/me/:id/images', authenticate, eventController.removeEventImage.bind(eventController));
 router.put('/me/:id', authenticate, eventListingUpload, eventController.updateEvent.bind(eventController));
 router.delete('/me/:id', authenticate, eventController.deleteMyEvent.bind(eventController));
 router.post('/:id/purchase', authenticate, eventController.createEventPaymentIntent.bind(eventController));
