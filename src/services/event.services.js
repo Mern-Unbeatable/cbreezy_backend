@@ -1520,6 +1520,7 @@ import prisma from '../config/prisma.js';
 import { PAYPAL_CURRENCY, getPayPalClient, getPayPalClientId } from '../config/paypal.js';
 import checkoutNodeJssdk from '@paypal/checkout-server-sdk';
 import { createHttpError } from '../utils/httpError.js';
+import { normalizePayPalError } from '../utils/paypalError.js';
 import { getUploadedFileUrl, toAbsoluteMediaUrl } from '../utils/media.js';
 
 const LISTING_STATUSES = ['PENDING', 'APPROVED', 'SUSPENDED', 'EXPIRED'];
@@ -1876,6 +1877,11 @@ const parseDateInput = (value, fieldName) => {
 };
 
 const normalizeError = (error) => {
+  const paypalError = normalizePayPalError(error);
+  if (paypalError) {
+    return paypalError;
+  }
+
   if (error?.status) {
     return error;
   }

@@ -1,5 +1,5 @@
 import prisma from '../config/prisma.js';
-import { PAYPAL_CURRENCY, getPayPalClientId } from '../config/paypal.js';
+import { PAYPAL_CURRENCY, getPayPalClientId, getPayPalMode } from '../config/paypal.js';
 import { createHttpError } from '../utils/httpError.js';
 
 // Required default plans that must always exist. Backend will ensure these on startup.
@@ -107,7 +107,8 @@ class PricingService {
       data: plans,
       meta: {
         paypalClientId: getPayPalClientId(),
-        paypalCurrency: PAYPAL_CURRENCY
+        paypalCurrency: PAYPAL_CURRENCY,
+        paypalMode: getPayPalMode()
       }
     };
   }
@@ -193,7 +194,8 @@ class PricingService {
         },
         plans: orderedPlans,
         paypalClientId: getPayPalClientId(),
-        paypalCurrency: PAYPAL_CURRENCY
+        paypalCurrency: PAYPAL_CURRENCY,
+        paypalMode: getPayPalMode()
       }
     };
   }
@@ -204,7 +206,8 @@ class PricingService {
       message: 'PayPal configuration retrieved successfully',
       data: {
         clientId: getPayPalClientId(),
-        currency: PAYPAL_CURRENCY
+        currency: PAYPAL_CURRENCY,
+        mode: getPayPalMode()
       }
     };
   }

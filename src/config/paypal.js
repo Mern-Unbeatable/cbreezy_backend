@@ -4,6 +4,7 @@ import 'dotenv/config';
 export const PAYPAL_CURRENCY = (process.env.PAYPAL_CURRENCY || 'usd').toUpperCase();
 
 let paypalClient;
+let cachedClientKey = '';
 
 export const getPayPalClient = () => {
   if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
@@ -12,15 +13,36 @@ export const getPayPalClient = () => {
     throw error;
   }
 
-  if (!paypalClient) {
-    const environment = process.env.PAYPAL_MODE === 'live'
-      ? new checkoutNodeJssdk.core.LiveEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET)
-      : new checkoutNodeJssdk.core.SandboxEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET);
-      
+  const clientKey = `${getPayPalMode()}:${process.env.PAYPAL_CLIENT_ID}`;
+
+  if (!paypalClient || cachedClientKey !== clientKey) {
+    const environment =
+      getPayPalMode() === 'live'
+        ? new checkoutNodeJssdk.core.LiveEnvironment(
+            process.env.PAYPAL_CLIENT_ID,
+            process.env.PAYPAL_CLIENT_SECRET
+          )
+        : new checkoutNodeJssdk.core.SandboxEnvironment(
+            process.env.PAYPAL_CLIENT_ID,
+            process.env.PAYPAL_CLIENT_SECRET
+          );
+
     paypalClient = new checkoutNodeJssdk.core.PayPalHttpClient(environment);
+    cachedClientKey = clientKey;
   }
 
   return paypalClient;
 };
 
 export const getPayPalClientId = () => process.env.PAYPAL_CLIENT_ID || null;
+
+export const getPayPalMode = () => {
+  const configured = String(process.env.PAYPAL_MODE || '').trim().toLowerCase();
+
+  if (configured === 'sandbox') {
+    return 'sandbox';
+  }
+
+  // Default to live when PAYPAL_MODE is unset — use PAYPAL_MODE=sandbox only for local testing.
+  return 'live';
+};
