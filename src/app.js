@@ -23,10 +23,9 @@ app.set("trust proxy", true);
 
 // CORS configuration
 const allowedOrigins = [
-  "*",
   "http://localhost:5173",
-  "https://cbreezy.mtscorporate.com",
-  "https://cbreezy.maktechgroup.tech",
+  "https://sidegurus.com",
+  "https://cbreezy.maktechgroup.tech"
 ];
 
 app.use(

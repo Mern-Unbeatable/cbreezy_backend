@@ -11,6 +11,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js",
+    "db:copy": "node prisma/copy-database.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
