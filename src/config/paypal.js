@@ -13,7 +13,7 @@ export const getPayPalClient = () => {
     throw error;
   }
 
-  const clientKey = `${getPayPalMode()}:${process.env.PAYPAL_CLIENT_ID}`;
+  const clientKey = `${getPayPalMode()}:${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`;
 
   if (!paypalClient || cachedClientKey !== clientKey) {
     const environment =
