@@ -8,23 +8,23 @@
 // async function main() {
 //   console.log("🌱 Starting database seeding...\n");
 
-//   // Create Admin User
-//   // console.log("👤 Creating admin user...");
+  // Create Admin User
+  // console.log("👤 Creating admin user...");
 
-//   // const hashedPassword = await bcrypt.hash("admin123", 10);
+  // const hashedPassword = await bcrypt.hash("admin123", 10);
 
-//   // const admin = await prisma.user.upsert({
-//   //   where: { email: "admin@sidegurus.com" },
-//   //   update: {},
-//   //   create: {
-//   //     fullName: "Admin User",
-//   //     email: "admin@sidegurus.com",
-//   //     password: hashedPassword,
-//   //     role: "ADMIN",
-//   //     isEmailVerified: true,
-//   //     phoneNumber: "+1234567890"
-//   //   }
-//   // });
+  // const admin = await prisma.user.upsert({
+  //   where: { email: "admin@sidegurus.com" },
+  //   update: {},
+  //   create: {
+  //     fullName: "Admin User",
+  //     email: "admin@sidegurus.com",
+  //     password: hashedPassword,
+  //     role: "ADMIN",
+  //     isEmailVerified: true,
+  //     phoneNumber: "+1234567890"
+  //   }
+  // });
 
 //   // console.log("✅ Admin user created");
 //   // console.log("   Email: admin@sidegurus.com");
@@ -598,26 +598,47 @@ async function main() {
   console.log("🌱 Starting database seeding...\n");
 
   // Create Admin User
+  // console.log("👤 Creating admin user...");
+  //
+  // const hashedPassword = await bcrypt.hash("admin123", 10);
+  //
+  // const admin = await prisma.user.upsert({
+  //   where: { email: "admin@sidegurus.com" },
+  //   update: {},
+  //   create: {
+  //     fullName: "Admin User",
+  //     email: "admin@sidegurus.com",
+  //     password: hashedPassword,
+  //     role: "ADMIN",
+  //     isEmailVerified: true,
+  //     phoneNumber: "+1234567890"
+  //   }
+  // });
+  //
+  // console.log("✅ Admin user created");
+  // console.log("   Email: admin@sidegurus.com");
+  // console.log("   Password: admin123\n");
+
   console.log("👤 Creating admin user...");
 
-  const hashedPassword = await bcrypt.hash("admin123", 10);
+  const hashedPassword = await bcrypt.hash("assistant@48544785", 10);
 
   const admin = await prisma.user.upsert({
-    where: { email: "admin@sidegurus.com" },
+    where: { email: "assistant@sidegurussecure.com" },
     update: {},
     create: {
-      fullName: "Admin User",
-      email: "admin@sidegurus.com",
+      fullName: "Assistant User",
+      email: "assistant@sidegurussecure.com",
       password: hashedPassword,
       role: "ADMIN",
       isEmailVerified: true,
-      phoneNumber: "+1234567890"
+      phoneNumber: "+233244200000"
     }
   });
 
   console.log("✅ Admin user created");
-  console.log("   Email: admin@sidegurus.com");
-  console.log("   Password: admin123\n");
+  console.log("   Email: admin@sidegurussecure.com");
+  console.log("   Password: adminsidegurus9b66d\n");
 
   // Create Countries, Regions, and Cities from locationsData
   // console.log("📍 Creating countries, regions, and cities...");

@@ -202,6 +202,7 @@ class DashboardService {
       prisma.user.count({
         where: {
           deletedAt: null,
+          role: 'USER',
           createdAt: {
             gte: currentRange.start,
             lt: currentRange.end
@@ -211,6 +212,7 @@ class DashboardService {
       prisma.user.count({
         where: {
           deletedAt: null,
+          role: 'USER',
           createdAt: {
             gte: previousRange.start,
             lt: previousRange.end
