@@ -7,8 +7,10 @@ const router = express.Router();
 router.use(authenticate, authorize('ADMIN'));
 
 router.get('/', adminUserController.getUsers.bind(adminUserController));
+router.post('/sub-admins', adminUserController.createSubAdmin.bind(adminUserController));
 router.get('/:id', adminUserController.getUserById.bind(adminUserController));
 router.put('/:id', adminUserController.updateUser.bind(adminUserController));
+router.patch('/:id/status', adminUserController.updateSubAdminStatus.bind(adminUserController));
 router.delete('/:id', adminUserController.deleteUser.bind(adminUserController));
 
 export default router;
