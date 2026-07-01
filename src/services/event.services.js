@@ -1521,6 +1521,8 @@ import { PAYPAL_CURRENCY, getPayPalClient, getPayPalClientId } from '../config/p
 import checkoutNodeJssdk from '@paypal/checkout-server-sdk';
 import { createHttpError } from '../utils/httpError.js';
 import { normalizePayPalError } from '../utils/paypalError.js';
+import { assertAllowedListingStatus } from '../utils/listingModeration.js';
+import { isComplimentaryListingPurchase, isSubAdminRole, getComplimentaryPaymentAmount, shouldAutoPublishSubAdminListing } from '../utils/subAdminListing.js';
 import { getUploadedFileUrl, toAbsoluteMediaUrl } from '../utils/media.js';
 
 const LISTING_STATUSES = ['PENDING', 'APPROVED', 'SUSPENDED', 'EXPIRED'];
@@ -1750,7 +1752,8 @@ const getEventPurchaseContext = (listingId, userId, planId) => Promise.all([
       id: userId
     },
     select: {
-      createdAt: true
+      createdAt: true,
+      role: true
     }
   }),
   prisma.systemSettings.findUnique({
@@ -2744,13 +2747,11 @@ class EventService {
     }
   }
 
-  async updateEventStatus({ id, status, baseUrl }) {
+  async updateEventStatus({ id, status, baseUrl, actorRole }) {
     try {
       await expireEventListings();
 
-      if (!MODERATABLE_STATUSES.includes(status)) {
-        throw createHttpError(400, 'status must be PENDING, APPROVED, or SUSPENDED');
-      }
+      assertAllowedListingStatus(status, actorRole);
 
       const existingListing = await prisma.listing.findFirst({
         where: {
@@ -2981,12 +2982,14 @@ class EventService {
       const isEligibleForFree = now <= freePromoEndsAt;
       const isEligibleForDiscount = now > freePromoEndsAt && now <= discountPromoEndsAt;
 
-      if (plan.tier === 'FREE' && !isEligibleForFree) {
-        throw createHttpError(400, 'You are no longer eligible for the free pricing plan');
-      }
+      if (!isSubAdminRole(user.role)) {
+        if (plan.tier === 'FREE' && !isEligibleForFree) {
+          throw createHttpError(400, 'You are no longer eligible for the free pricing plan');
+        }
 
-      if (plan.tier === 'PROMO' && !isEligibleForDiscount) {
-        throw createHttpError(400, 'You are no longer eligible for the promo pricing plan');
+        if (plan.tier === 'PROMO' && !isEligibleForDiscount) {
+          throw createHttpError(400, 'You are no longer eligible for the promo pricing plan');
+        }
       }
 
       const isUnderFirstThreeMonths = isEligibleForDiscount || isEligibleForFree; 
@@ -2997,10 +3000,14 @@ class EventService {
         throw createHttpError(409, 'This event listing has already been paid for');
       }
 
-      // If the selected plan is free, finalize the purchase server-side without creating a Stripe session.
-      if (!plan.price || Number(plan.price) <= 0) {
-        const renewalPublishedAt = new Date();
-        const renewalExpiresAt = getListingExpiryDate(renewalPublishedAt);
+      if (isComplimentaryListingPurchase(user.role, plan.price)) {
+        const paymentAmount = getComplimentaryPaymentAmount(user.role, plan.price);
+        const publishedAt = new Date();
+        const autoPublish = shouldAutoPublishSubAdminListing(user.role, isRenewal);
+        const shouldPublish = isRenewal || autoPublish;
+        const publishExpiresAt = isRenewal
+          ? getListingExpiryDate(publishedAt)
+          : getEventExpiryDate({ publishedAt, endDate: listing.endDate });
 
         const result = await prisma.$transaction(async (tx) => {
           const existingFreePayment = await tx.payment.findFirst({
@@ -3015,27 +3022,27 @@ class EventService {
           const payment = await tx.payment.create({
             data: {
               paypalOrderId: generatedSessionId,
-              amount: plan.price,
+              amount: paymentAmount,
               status: 'SUCCESS',
               listingId: listing.id,
               userId
             }
           });
 
-          const subscription = isRenewal
+          const subscription = shouldPublish
             ? await tx.subscription.upsert({
                 where: { listingId: listing.id },
                 update: {
                   planType: plan.title,
-                  startDate: renewalPublishedAt,
-                  endDate: renewalExpiresAt,
+                  startDate: publishedAt,
+                  endDate: publishExpiresAt,
                   isActive: true
                 },
                 create: {
                   listingId: listing.id,
                   planType: plan.title,
-                  startDate: renewalPublishedAt,
-                  endDate: renewalExpiresAt,
+                  startDate: publishedAt,
+                  endDate: publishExpiresAt,
                   isActive: true
                 }
               })
@@ -3047,9 +3054,9 @@ class EventService {
           await tx.listing.update({
             where: { id: listing.id },
             data: {
-              status: isRenewal ? 'APPROVED' : 'PENDING',
-              publishedAt: isRenewal ? renewalPublishedAt : listing.publishedAt,
-              expiresAt: isRenewal ? renewalExpiresAt : listing.expiresAt
+              status: shouldPublish ? 'APPROVED' : 'PENDING',
+              publishedAt: shouldPublish ? publishedAt : listing.publishedAt,
+              expiresAt: shouldPublish ? publishExpiresAt : listing.expiresAt
             }
           });
 
@@ -3064,8 +3071,12 @@ class EventService {
         return {
           statusCode: 200,
           message: isRenewal
-            ? 'Free activation applied and the event has been renewed'
-            : 'Free activation applied and the event is now ready for admin review',
+            ? (isSubAdminRole(user.role)
+              ? 'Event renewed without payment'
+              : 'Free activation applied and the event has been renewed')
+            : (autoPublish
+              ? 'Event published successfully without payment'
+              : 'Free activation applied and the event is now ready for admin review'),
           data: {
             listing: serializeEventMedia(baseUrl, result.listing),
             payment: result.payment,

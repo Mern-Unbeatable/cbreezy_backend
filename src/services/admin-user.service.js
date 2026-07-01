@@ -1,9 +1,10 @@
 import prisma from '../config/prisma.js';
+import bcrypt from 'bcryptjs';
 import { createHttpError } from '../utils/httpError.js';
+import { ASSIGNABLE_USER_ROLES, ROLES } from '../constants/roles.js';
 
 const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
 const USER_SORTABLE_FIELDS = ['createdAt', 'fullName', 'email'];
-const USER_ROLES = ['USER', 'ADMIN'];
 
 const toAbsoluteMediaUrl = (baseUrl, mediaPath) => {
   if (!mediaPath) {
@@ -35,6 +36,7 @@ const buildUserSelect = () => ({
   profileImage: true,
   role: true,
   isEmailVerified: true,
+  isActive: true,
   createdAt: true,
   updatedAt: true,
   countryId: true,
@@ -79,7 +81,83 @@ const getActiveListingCounts = async (userIds) => {
   return new Map(rows.map((row) => [row.userId, row._count._all]));
 };
 
+const validateEmail = (email) => {
+  const normalizedEmail = email?.trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    throw createHttpError(400, 'email is required');
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(normalizedEmail)) {
+    throw createHttpError(400, 'Invalid email format');
+  }
+
+  return normalizedEmail;
+};
+
+const validatePassword = (password) => {
+  if (!password || typeof password !== 'string' || password.length < 8) {
+    throw createHttpError(400, 'password must be at least 8 characters');
+  }
+
+  return password;
+};
+
+const assertSubAdminUser = (user) => {
+  if (!user) {
+    throw createHttpError(404, 'Sub-admin not found');
+  }
+
+  if (user.role !== ROLES.SUB_ADMIN) {
+    throw createHttpError(400, 'This action is only available for sub-admin accounts');
+  }
+};
+
 class AdminUserService {
+  async createSubAdmin({ body, baseUrl }) {
+    const { fullName, email, password } = body;
+    const normalizedFullName = fullName?.trim();
+    const normalizedEmail = validateEmail(email);
+    const validatedPassword = validatePassword(password);
+
+    if (!normalizedFullName) {
+      throw createHttpError(400, 'fullName is required');
+    }
+
+    const duplicateUser = await prisma.user.findFirst({
+      where: {
+        email: normalizedEmail,
+        deletedAt: null
+      },
+      select: { id: true }
+    });
+
+    if (duplicateUser) {
+      throw createHttpError(409, 'User with this email already exists');
+    }
+
+    const hashedPassword = await bcrypt.hash(validatedPassword, 10);
+
+    const user = await prisma.user.create({
+      data: {
+        fullName: normalizedFullName,
+        email: normalizedEmail,
+        password: hashedPassword,
+        role: ROLES.SUB_ADMIN,
+        isEmailVerified: true,
+        isActive: true
+      },
+      select: buildUserSelect()
+    });
+
+    return {
+      statusCode: 201,
+      message: 'Sub-admin created successfully',
+      data: serializeUser(baseUrl, user, 0)
+    };
+  }
+
   async getUsers({ query, baseUrl }) {
     const {
       search,
@@ -90,8 +168,8 @@ class AdminUserService {
       limit = '20'
     } = query;
 
-    if (role && !USER_ROLES.includes(role)) {
-      throw createHttpError(400, 'role must be USER or ADMIN');
+    if (role && !ASSIGNABLE_USER_ROLES.includes(role)) {
+      throw createHttpError(400, 'role must be USER, ADMIN, or SUB_ADMIN');
     }
 
     const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
@@ -196,7 +274,7 @@ class AdminUserService {
   }
 
   async updateUser({ id, body, baseUrl }) {
-    const { fullName, email, phoneNumber, countryId, regionId, role, isEmailVerified } = body;
+    const { fullName, email, phoneNumber, countryId, regionId, role, isEmailVerified, password, isActive } = body;
 
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -214,6 +292,23 @@ class AdminUserService {
 
     if (!existingUser) {
       throw createHttpError(404, 'User not found');
+    }
+
+    if (existingUser.role === ROLES.SUB_ADMIN) {
+      return this.updateSubAdmin({
+        id,
+        body: { fullName, email, password, isActive },
+        baseUrl,
+        existingUser
+      });
+    }
+
+    if (password !== undefined) {
+      throw createHttpError(400, 'Password can only be updated for sub-admin accounts');
+    }
+
+    if (isActive !== undefined) {
+      throw createHttpError(400, 'isActive can only be updated for sub-admin accounts');
     }
 
     const normalizedFullName = fullName === undefined ? undefined : fullName.trim();
@@ -254,8 +349,12 @@ class AdminUserService {
       }
     }
 
-    if (role !== undefined && !USER_ROLES.includes(role)) {
-      throw createHttpError(400, 'role must be USER or ADMIN');
+    if (role !== undefined && !ASSIGNABLE_USER_ROLES.includes(role)) {
+      throw createHttpError(400, 'role must be USER, ADMIN, or SUB_ADMIN');
+    }
+
+    if (role === ROLES.SUB_ADMIN) {
+      throw createHttpError(400, 'Use POST /api/admin/users/sub-admins to create a sub-admin account');
     }
 
     if (isEmailVerified !== undefined && typeof isEmailVerified !== 'boolean') {
@@ -316,6 +415,95 @@ class AdminUserService {
     };
   }
 
+  async updateSubAdmin({ id, body, baseUrl, existingUser }) {
+    const { fullName, email, password, isActive } = body;
+
+    assertSubAdminUser(existingUser);
+
+    const normalizedFullName = fullName === undefined ? undefined : fullName.trim();
+    const normalizedEmail = email === undefined ? undefined : validateEmail(email);
+
+    if (fullName !== undefined && !normalizedFullName) {
+      throw createHttpError(400, 'fullName cannot be empty');
+    }
+
+    if (email !== undefined) {
+      const duplicateUser = await prisma.user.findFirst({
+        where: {
+          email: normalizedEmail,
+          deletedAt: null,
+          NOT: { id }
+        },
+        select: { id: true }
+      });
+
+      if (duplicateUser) {
+        throw createHttpError(409, 'User with this email already exists');
+      }
+    }
+
+    if (isActive !== undefined && typeof isActive !== 'boolean') {
+      throw createHttpError(400, 'isActive must be a boolean');
+    }
+
+    const updates = {
+      ...(fullName !== undefined ? { fullName: normalizedFullName } : {}),
+      ...(email !== undefined ? { email: normalizedEmail } : {}),
+      ...(isActive !== undefined ? { isActive } : {})
+    };
+
+    if (password !== undefined) {
+      updates.password = await bcrypt.hash(validatePassword(password), 10);
+    }
+
+    if (!Object.keys(updates).length) {
+      throw createHttpError(400, 'At least one field is required to update');
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: updates,
+      select: buildUserSelect()
+    });
+
+    return {
+      statusCode: 200,
+      message: 'Sub-admin updated successfully',
+      data: serializeUser(baseUrl, user, 0)
+    };
+  }
+
+  async updateSubAdminStatus({ id, isActive, baseUrl }) {
+    if (typeof isActive !== 'boolean') {
+      throw createHttpError(400, 'isActive must be a boolean');
+    }
+
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        id,
+        deletedAt: null
+      },
+      select: {
+        id: true,
+        role: true
+      }
+    });
+
+    assertSubAdminUser(existingUser);
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { isActive },
+      select: buildUserSelect()
+    });
+
+    return {
+      statusCode: 200,
+      message: isActive ? 'Sub-admin activated successfully' : 'Sub-admin paused successfully',
+      data: serializeUser(baseUrl, user, 0)
+    };
+  }
+
   async deleteUser({ id, adminUserId }) {
     const user = await prisma.user.findFirst({
       where: {
@@ -335,6 +523,10 @@ class AdminUserService {
 
     if (user.id === adminUserId) {
       throw createHttpError(400, 'You cannot delete your own account');
+    }
+
+    if (user.role === ROLES.ADMIN) {
+      throw createHttpError(403, 'Admin accounts cannot be deleted');
     }
 
     const deletedAt = new Date();

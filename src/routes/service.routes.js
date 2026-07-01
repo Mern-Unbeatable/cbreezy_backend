@@ -1,6 +1,7 @@
 import express from 'express';
 import listingController from '../controllers/service.controller.js';
 import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { LISTING_MODERATOR_ROLES } from '../constants/roles.js';
 import { serviceListingUpload } from '../middlewares/upload.middleware.js';
 
 const router = express.Router();
@@ -17,7 +18,7 @@ router.post('/:id/purchase/confirm', authenticate, listingController.confirmServ
 router.post('/:id/renew', authenticate, listingController.createServiceRenewalCheckoutSession.bind(listingController));
 router.post('/:id/renew/confirm', authenticate, listingController.confirmServiceRenewal.bind(listingController));
 router.post('/:id/report-spam', listingController.reportServiceSpam.bind(listingController));
-router.patch('/:id/status', authenticate, authorize('ADMIN'), listingController.updateServiceStatus.bind(listingController));
+router.patch('/:id/status', authenticate, authorize(...LISTING_MODERATOR_ROLES), listingController.updateServiceStatus.bind(listingController));
 router.delete('/:id', authenticate, authorize('ADMIN'), listingController.deleteService.bind(listingController));
 router.get('/:id', listingController.getServiceById.bind(listingController));
 

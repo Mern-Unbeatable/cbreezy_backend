@@ -14,6 +14,7 @@ model User {
   role            Role          @default(USER)
   authProvider    AuthProvider  @default(EMAIL)
   isEmailVerified Boolean       @default(false)
+  isActive        Boolean       @default(true)
   
   // Relations
   listings      Listing[]
@@ -29,6 +30,7 @@ model User {
 enum Role {
   USER
   ADMIN
+  SUB_ADMIN
 }
 
 enum AuthProvider {
