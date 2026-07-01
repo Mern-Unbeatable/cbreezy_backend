@@ -16,6 +16,19 @@ const sendResponse = (res, result) => res.status(result.statusCode).json({
 });
 
 class AdminUserController {
+  async createSubAdmin(req, res, next) {
+    try {
+      const result = await adminUserService.createSubAdmin({
+        body: req.body,
+        baseUrl: getBaseUrl(req)
+      });
+
+      return sendResponse(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getUsers(req, res, next) {
     try {
       const result = await adminUserService.getUsers({
@@ -47,6 +60,20 @@ class AdminUserController {
       const result = await adminUserService.updateUser({
         id: req.params.id,
         body: req.body,
+        baseUrl: getBaseUrl(req)
+      });
+
+      return sendResponse(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateSubAdminStatus(req, res, next) {
+    try {
+      const result = await adminUserService.updateSubAdminStatus({
+        id: req.params.id,
+        isActive: req.body.isActive,
         baseUrl: getBaseUrl(req)
       });
 

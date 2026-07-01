@@ -868,6 +868,7 @@ class AuthService {
         authProvider: true,
         profileImage: true,
         isEmailVerified: true,
+        isActive: true,
         createdAt: true,
         countryId: true,
         regionId: true,
@@ -1072,6 +1073,10 @@ class AuthService {
     // Check if email is verified
     if (!user.isEmailVerified) {
       throw new Error('Please verify your email before logging in. Check your email for the OTP.');
+    }
+
+    if (user.role === 'SUB_ADMIN' && user.isActive === false) {
+      throw new Error('Your sub-admin account has been paused. Contact an administrator.');
     }
 
     // Return full auth response (includes relations)

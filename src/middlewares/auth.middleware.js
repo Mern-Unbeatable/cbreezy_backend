@@ -1,10 +1,14 @@
 import { verifyToken } from '../utils/jwtUtils.js';
+import { LISTING_MODERATOR_ROLES, ROLES } from '../constants/roles.js';
+import prisma from '../config/prisma.js';
+
+export { ROLES, LISTING_MODERATOR_ROLES };
 
 /**
  * Authentication middleware
  * Verifies JWT token and attaches user data to request
  */
-export const authenticate = (req, res, next) => {
+export const authenticate = async (req, res, next) => {
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
@@ -21,6 +25,33 @@ export const authenticate = (req, res, next) => {
 
     // Verify token
     const decoded = verifyToken(token);
+
+    if (decoded.role === ROLES.SUB_ADMIN) {
+      const subAdmin = await prisma.user.findFirst({
+        where: {
+          id: decoded.userId,
+          deletedAt: null,
+          role: ROLES.SUB_ADMIN
+        },
+        select: {
+          isActive: true
+        }
+      });
+
+      if (!subAdmin) {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid or expired token. Please login again.'
+        });
+      }
+
+      if (!subAdmin.isActive) {
+        return res.status(403).json({
+          success: false,
+          error: 'Your sub-admin account has been paused. Contact an administrator.'
+        });
+      }
+    }
 
     // Attach user data to request
     req.user = decoded;

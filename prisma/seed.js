@@ -619,26 +619,75 @@ async function main() {
   // console.log("   Email: admin@sidegurus.com");
   // console.log("   Password: admin123\n");
 
-  console.log("👤 Creating admin user...");
+  // console.log("👤 Creating admin user...");
+  //
+  // const hashedPassword = await bcrypt.hash("assistant@48544785", 10);
+  //
+  // const admin = await prisma.user.upsert({
+  //   where: { email: "assistant@sidegurussecure.com" },
+  //   update: {},
+  //   create: {
+  //     fullName: "Assistant User",
+  //     email: "assistant@sidegurussecure.com",
+  //     password: hashedPassword,
+  //     role: "ADMIN",
+  //     isEmailVerified: true,
+  //     phoneNumber: "+233244200000"
+  //   }
+  // });
+  //
+  // console.log("✅ Admin user created");
+  // console.log("   Email: assistant@sidegurussecure.com");
+  // console.log("   Password: assistant@48544785\n");
 
-  const hashedPassword = await bcrypt.hash("assistant@48544785", 10);
+  // console.log("👤 Creating demo user...");
+  //
+  // const demoHashedPassword = await bcrypt.hash("secureuser9b66d", 10);
+  //
+  // await prisma.user.upsert({
+  //   where: { email: "secrectuser@gmail.com" },
+  //   update: {},
+  //   create: {
+  //     fullName: "Demo User",
+  //     email: "secureuser@gmail.com",
+  //     password: demoHashedPassword,
+  //     role: "USER",
+  //     isEmailVerified: true,
+  //     phoneNumber: "+1234567890"
+  //   }
+  // });
+  //
+  // console.log("✅ Demo user created");
+  // console.log("   Email: secrectuser@gmail.com");
+  // console.log("   Password: secretuser9b66d\n");
 
-  const admin = await prisma.user.upsert({
-    where: { email: "assistant@sidegurussecure.com" },
-    update: {},
+  console.log("👤 Creating intro pricing user (free period expired)...");
+
+  const introPricingUserCreatedAt = new Date();
+  introPricingUserCreatedAt.setDate(introPricingUserCreatedAt.getDate() - 45);
+
+  const introPricingHashedPassword = await bcrypt.hash("intropricing9b66d", 10);
+
+  await prisma.user.upsert({
+    where: { email: "intropricinguser@gmail.com" },
+    update: {
+      createdAt: introPricingUserCreatedAt
+    },
     create: {
-      fullName: "Assistant User",
-      email: "assistant@sidegurussecure.com",
-      password: hashedPassword,
-      role: "ADMIN",
+      fullName: "Intro Pricing User",
+      email: "intropricinguser@gmail.com",
+      password: introPricingHashedPassword,
+      role: "USER",
       isEmailVerified: true,
-      phoneNumber: "+233244200000"
+      phoneNumber: "+1234567891",
+      createdAt: introPricingUserCreatedAt
     }
   });
 
-  console.log("✅ Admin user created");
-  console.log("   Email: admin@sidegurussecure.com");
-  console.log("   Password: adminsidegurus9b66d\n");
+  console.log("✅ Intro pricing user created");
+  console.log("   Email: intropricinguser@gmail.com");
+  console.log("   Password: intropricing9b66d");
+  console.log(`   Account age: ~45 days (free expired, Intro Pricing active)\n`);
 
   // Create Countries, Regions, and Cities from locationsData
   // console.log("📍 Creating countries, regions, and cities...");

@@ -1,5 +1,6 @@
 import prisma from '../config/prisma.js';
 import { createHttpError } from '../utils/httpError.js';
+import { assertAllowedListingStatus } from '../utils/listingModeration.js';
 
 const ABSOLUTE_URL_PATTERN = /^https?:\/\//i;
 const LISTING_STATUSES = ['PENDING', 'APPROVED', 'SUSPENDED', 'EXPIRED'];
@@ -255,13 +256,11 @@ class AdminListingService {
     }
   }
 
-  async updateListingStatus({ id, status, baseUrl }) {
+  async updateListingStatus({ id, status, baseUrl, actorRole }) {
     try {
       await expireListings();
 
-      if (!MODERATABLE_STATUSES.includes(status)) {
-        throw createHttpError(400, 'status must be PENDING, APPROVED, or SUSPENDED');
-      }
+      assertAllowedListingStatus(status, actorRole);
 
       const existingListing = await prisma.listing.findFirst({
         where: {

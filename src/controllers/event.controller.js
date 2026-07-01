@@ -126,7 +126,8 @@ class EventController {
       const result = await eventService.updateEventStatus({
         id: req.params.id,
         status: req.body.status,
-        baseUrl: getBaseUrl(req)
+        baseUrl: getBaseUrl(req),
+        actorRole: req.user?.role
       });
       return sendResponse(res, result);
     } catch (error) {

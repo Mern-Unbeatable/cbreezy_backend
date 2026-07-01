@@ -3,6 +3,8 @@ import { PAYPAL_CURRENCY, getPayPalClient, getPayPalClientId } from '../config/p
 import checkoutNodeJssdk from '@paypal/checkout-server-sdk';
 import { createHttpError } from '../utils/httpError.js';
 import { normalizePayPalError } from '../utils/paypalError.js';
+import { assertAllowedListingStatus } from '../utils/listingModeration.js';
+import { isComplimentaryListingPurchase, isSubAdminRole, getComplimentaryPaymentAmount, shouldAutoPublishSubAdminListing, getComplimentaryPlanExpiryDate } from '../utils/subAdminListing.js';
 
 const LISTING_STATUSES = ['PENDING', 'APPROVED', 'SUSPENDED', 'EXPIRED'];
 const MODERATABLE_STATUSES = ['PENDING', 'APPROVED', 'SUSPENDED'];
@@ -188,7 +190,8 @@ const getServicePurchaseContext = (listingId, userId, planId) => Promise.all([
       id: userId
     },
     select: {
-      createdAt: true
+      createdAt: true,
+      role: true
     }
   }),
   prisma.pricingPlan.findFirst({
@@ -1170,13 +1173,11 @@ class ListingService {
     }
   }
 
-  async updateServiceStatus({ id, status, baseUrl }) {
+  async updateServiceStatus({ id, status, baseUrl, actorRole }) {
     try {
       await expireServiceListings();
 
-      if (!MODERATABLE_STATUSES.includes(status)) {
-        throw createHttpError(400, 'status must be PENDING, APPROVED, or SUSPENDED');
-      }
+      assertAllowedListingStatus(status, actorRole);
 
       const existingListing = await prisma.listing.findFirst({
         where: {
@@ -1393,7 +1394,7 @@ class ListingService {
       }
 
       const isUnderFirstThreeMonths = user.createdAt >= getIntroductoryCutoffDate();
-      if (introductoryPlan && plan.id === introductoryPlan.id && !isUnderFirstThreeMonths) {
+      if (!isSubAdminRole(user.role) && introductoryPlan && plan.id === introductoryPlan.id && !isUnderFirstThreeMonths) {
         throw createHttpError(400, 'You are no longer eligible for the introductory pricing plan');
       }
 
@@ -1403,10 +1404,14 @@ class ListingService {
         throw createHttpError(409, 'This service listing has already been paid for');
       }
 
-      // If the selected plan is free (price <= 0), finalize the purchase server-side without creating a Stripe session.
-      if (!plan.price || Number(plan.price) <= 0) {
-        const renewalPublishedAt = new Date();
-        const renewalExpiresAt = getListingExpiryDate(renewalPublishedAt);
+      if (isComplimentaryListingPurchase(user.role, plan.price)) {
+        const paymentAmount = getComplimentaryPaymentAmount(user.role, plan.price);
+        const publishedAt = new Date();
+        const autoPublish = shouldAutoPublishSubAdminListing(user.role, isRenewal);
+        const shouldPublish = isRenewal || autoPublish;
+        const publishExpiresAt = isRenewal
+          ? getListingExpiryDate(publishedAt)
+          : getComplimentaryPlanExpiryDate(publishedAt, plan, LISTING_ACTIVE_DAYS);
 
         const result = await prisma.$transaction(async (tx) => {
           // Create payment record (no stripeSessionId)
@@ -1422,27 +1427,27 @@ class ListingService {
           const payment = await tx.payment.create({
             data: {
               paypalOrderId: generatedSessionId,
-              amount: plan.price,
+              amount: paymentAmount,
               status: 'SUCCESS',
               listingId: listing.id,
               userId
             }
           });
 
-          const subscription = isRenewal
+          const subscription = shouldPublish
             ? await tx.subscription.upsert({
                 where: { listingId: listing.id },
                 update: {
                   planType: plan.title,
-                  startDate: renewalPublishedAt,
-                  endDate: renewalExpiresAt,
+                  startDate: publishedAt,
+                  endDate: publishExpiresAt,
                   isActive: true
                 },
                 create: {
                   listingId: listing.id,
                   planType: plan.title,
-                  startDate: renewalPublishedAt,
-                  endDate: renewalExpiresAt,
+                  startDate: publishedAt,
+                  endDate: publishExpiresAt,
                   isActive: true
                 }
               })
@@ -1454,9 +1459,9 @@ class ListingService {
           await tx.listing.update({
             where: { id: listing.id },
             data: {
-              status: isRenewal ? 'APPROVED' : 'PENDING',
-              publishedAt: isRenewal ? renewalPublishedAt : listing.publishedAt,
-              expiresAt: isRenewal ? renewalExpiresAt : listing.expiresAt
+              status: shouldPublish ? 'APPROVED' : 'PENDING',
+              publishedAt: shouldPublish ? publishedAt : listing.publishedAt,
+              expiresAt: shouldPublish ? publishExpiresAt : listing.expiresAt
             }
           });
 
@@ -1471,8 +1476,12 @@ class ListingService {
         return {
           statusCode: 200,
           message: isRenewal
-            ? 'Free activation applied and the listing has been renewed'
-            : 'Free activation applied and the listing is now ready for admin review',
+            ? (isSubAdminRole(user.role)
+              ? 'Listing renewed without payment'
+              : 'Free activation applied and the listing has been renewed')
+            : (autoPublish
+              ? 'Listing published successfully without payment'
+              : 'Free activation applied and the listing is now ready for admin review'),
           data: {
             listing: serializeListingMedia(baseUrl, result.listing),
             payment: result.payment,
