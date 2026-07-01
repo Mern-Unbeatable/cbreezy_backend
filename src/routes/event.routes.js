@@ -1,6 +1,7 @@
 import express from 'express';
 import eventController from '../controllers/event.controller.js';
 import { authenticate, authorize } from '../middlewares/auth.middleware.js';
+import { LISTING_MODERATOR_ROLES } from '../constants/roles.js';
 import { eventListingUpload } from '../middlewares/upload.middleware.js';
 
 const router = express.Router();
@@ -17,7 +18,7 @@ router.post('/:id/purchase/confirm', authenticate, eventController.confirmEventL
 router.post('/:id/renew', authenticate, eventController.createEventRenewalCheckoutSession.bind(eventController));
 router.post('/:id/renew/confirm', authenticate, eventController.confirmEventRenewal.bind(eventController));
 router.post('/:id/report-spam', eventController.reportEventSpam.bind(eventController));
-router.patch('/:id/status', authenticate, authorize('ADMIN'), eventController.updateEventStatus.bind(eventController));
+router.patch('/:id/status', authenticate, authorize(...LISTING_MODERATOR_ROLES), eventController.updateEventStatus.bind(eventController));
 router.delete('/:id', authenticate, authorize('ADMIN'), eventController.deleteEvent.bind(eventController));
 router.get('/:id', eventController.getEventById.bind(eventController));
 

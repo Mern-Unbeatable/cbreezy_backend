@@ -45,7 +45,8 @@ class AdminListingController {
       const result = await adminListingService.updateListingStatus({
         id: req.params.id,
         status: req.body.status,
-        baseUrl: getBaseUrl(req)
+        baseUrl: getBaseUrl(req),
+        actorRole: req.user?.role
       });
       return sendResponse(res, result);
     } catch (error) {
